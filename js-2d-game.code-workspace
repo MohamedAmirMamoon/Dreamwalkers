@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"name": "js-2d-game",
+			"path": "."
+		},
+		{
+			"path": "../../Downloads/01-pizza-legends-intro 2/images"
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "js-2d-game"
+	}
+}
