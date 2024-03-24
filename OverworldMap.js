@@ -66,4 +66,21 @@ window.OverworldMaps = {
             })
         }
     },
+    Jungle: {
+        lowerSrc: "/images/maps/Jungle.png",
+        upperSrc: "/images/maps/KitchenUpper.png",
+        gameObjects: {
+            hero: new Person({
+                isPlayerControlled: true,
+                x: utils.withGrid(4),
+                y: utils.withGrid(9),
+            }),
+            npc1: new Person({
+                isPlayerControlled: false,
+                x: utils.withGrid(9),
+                y: utils.withGrid(6),
+                src: "/images/characters/people/npc1.png"
+            })
+        }
+    },
 }
