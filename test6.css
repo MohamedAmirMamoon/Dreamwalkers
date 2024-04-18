@@ -1,0 +1,267 @@
+body{
+background-image: url('./fightingsceneimage/jungle.png');
+}
+
+/* Fight Scene Pop Up */
+
+.boxy{
+    background-image: url('./fightingsceneimage/greenbackground.png'); 
+    background-size: cover;
+    background-position: center;
+    width: 900px;
+    height: 600px;
+    display: block;
+    margin: 150px auto; 
+    width: 50%;
+    border-radius: 5%;
+}
+
+.snake-container {
+    position: relative;
+    bottom:160px;
+    left:130px;
+    z-index: 1;
+}
+
+.snake-container img {
+    position: absolute;
+    top: 10;
+    left: 100px;
+    width:600px;
+    height:400px;
+    transition: left 0.5s ease-in-out;
+    z-index: 1;
+    
+}
+
+.button{
+    z-index: 2;
+}
+
+.rectangle-container {
+display: inline-block;
+margin-right: -4px;
+transform: translateX(100px); 
+margin-top: 10px; 
+position: relative; 
+z-index: 2;
+}
+
+
+.rectangle {
+display: inline-block;
+width: 33px;
+height: 15px;
+background-color: lightcoral;
+transition: opacity 0.1s ease-in-out;
+margin-right: -4px;
+margin-top: 90px; 
+position: relative; 
+z-index: 3;
+
+}
+
+.you-rectangle-container {
+display: inline-block;
+margin-right: -4px;
+transform: translateX(100px); 
+margin-top: 20px; 
+position: relative; 
+z-index: 2; 
+
+}
+
+.rectangle1 {
+display: inline-block;
+width: 33px;
+height: 15px;
+background-color: lightcoral;
+transition: opacity 0.1s ease-in-out;
+margin-right: -4px;
+margin-top: 60px;
+position:absolute;
+left:10px;
+bottom:-200px;
+position: relative; 
+z-index: 3; 
+}
+
+
+#fightButton {
+width: 400px; 
+height: 200px; 
+position: absolute;
+bottom: 140px; 
+right: 420px; 
+z-index: 2; 
+cursor: pointer;
+clip: rect(10px, 200px, 100px, 10px); 
+}
+
+#fightButton:hover {
+opacity: 0.8;
+}
+
+.message {
+display: none;
+margin-top: 20px;
+font-size: 60px;
+color: White;
+text-align: center;
+position: absolute;
+bottom:400px;
+left: 50%;
+transform: translate(-50%, -50%);
+background-color: green;
+padding: 10px;
+z-index: 4;
+}
+
+#blockButton{
+width: 400px;
+height: 200px;
+position: absolute;
+bottom: 140px; 
+right: 430px;
+z-index: 1;
+}
+
+#escapeButton {
+width: 400px; 
+height: 200px; 
+position: absolute;
+bottom: 150px;
+right: 430px;
+z-index: 2;
+cursor: pointer;
+clip: rect(50px, 380px, 180px, 200px); 
+}
+
+#powerButtonImg{
+width: 400px;
+height: 200px;
+position: absolute;
+bottom: 150px; 
+right: 420px;
+cursor: pointer;
+z-index: 1;
+}
+
+#gamesign{
+width: 400px;
+height: 200px;
+position: absolute;
+bottom: 150px; 
+right: 810px;
+z-index: 1;
+}
+
+.custom-circle {
+width: 150px;
+height: 150px;
+position: absolute;
+bottom: 350px;
+right: 880px;
+transition: background-color 1s ease-in-out;
+z-index:1;
+
+}
+
+.oval{
+    width: 200px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: white;
+    position: absolute;
+    bottom: 340px; 
+    left: 460px; 
+   
+
+}
+
+.oval2{
+    width: 200px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: white;
+    position: absolute;
+    bottom: 470px; 
+    left: 820px; 
+   
+
+}
+
+#heart{
+    width: 30px;
+    height: 30px;
+    position: absolute;
+    bottom:595px;
+    left:435px;
+    z-index: 4;
+}
+
+#heart2{
+    width: 30px;
+    height: 30px;
+    position: absolute;
+    bottom:395px;
+    left:740px;
+    z-index: 4;
+}
+
+
+.healthbar{
+    width: 360px;
+    height: 50px; 
+    background-color: lightgray;
+    position: absolute;
+    bottom: 585px; 
+    left: 430px; 
+    z-index: 1; 
+}
+
+.healthbar2{
+    width: 360px;
+    height: 50px; 
+    background-color: lightgray;
+    position: absolute;
+    bottom: 385px; 
+    left: 720px; 
+    z-index: 1; 
+}
+
+.fight-message {
+display: none;
+margin-top: 20px;
+font-size: 20px;
+color: Black;
+text-align: center;
+position: absolute;
+bottom: 215px;
+left: 37%;
+transform: translate(-50%, -50%);
+padding: 10px;
+z-index: 4;
+}
+
+#hpText{
+font-size: 15px; 
+color: black; 
+text-align: center;
+position:absolute;
+left:480px;
+bottom:610px;
+z-index: 4;
+
+}
+
+#hpText2{
+font-size: 15px; 
+color: black; 
+text-align: center;
+position:absolute;
+right:655px;
+bottom:410px;
+z-index: 4;
+
+}
