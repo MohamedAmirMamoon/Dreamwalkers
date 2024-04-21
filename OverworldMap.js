@@ -50,10 +50,38 @@ class OverworldMap {
         delete this.walls[`${x},${y}`]
     }
     moveWall(wasX, wasY, direction) {
+        const nextPosition = utils.nextPosition(wasX, wasY, direction);
+        const { x, y } = nextPosition;
         this.removeWall(wasX, wasY);
-        const {x,y} = utils.nextPosition(wasX, wasY, direction);
-        this.addWall(x,y);
+        this.addWall(x, y);
+    
+        // Check if the moveable character collides with any of the hitbox walls
+       // Check if the moveable character collides with any of the hitbox walls
+        const hitboxWalls1 = [
+            utils.asGridCoord(25, 32), // Left side
+            utils.asGridCoord(25, 34), // Right side
+            utils.asGridCoord(26, 33), // Top side
+            utils.asGridCoord(24, 33)  // Bottom side
+        ];
+
+        if (hitboxWalls1.includes(`${x},${y}`)) {
+            // Redirect to test6.html
+            window.location.href = "test6.html";
+        }
+
+        const hitboxWalls2 = [
+            utils.asGridCoord(42, 39), // Left side
+            utils.asGridCoord(43, 40), // Right side
+            utils.asGridCoord(41, 40), // Top side
+            utils.asGridCoord(42, 41)  // Bottom side
+        ];
+
+        if (hitboxWalls2.includes(`${x},${y}`)) {
+            window.location.href = "test.html";
+        }
+
     }
+    
 
 }
 
@@ -111,9 +139,22 @@ window.OverworldMaps = {
                 x: utils.withGrid(40),
                 y: utils.withGrid(30),
                 src: "/images/characters/people/npc1.png"
+            }),
+            snake: new Person({
+                isPlayerControlled: false,
+                x: utils.withGrid(25),
+                y: utils.withGrid(33),
+                src: "/images/characters/people/snake.png"
+            }),
+            shop: new Person({
+                isPlayerControlled: false,
+                x: utils.withGrid(42),
+                y: utils.withGrid(40),
+                src: "/images/characters/people/teepee.png"
             })
         },
         walls: {
+              
             [utils.asGridCoord(19,35)] : true,
             [utils.asGridCoord(19,36)] : true,
             [utils.asGridCoord(18,37)] : true,

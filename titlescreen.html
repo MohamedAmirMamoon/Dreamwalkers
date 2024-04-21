@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .TitleScreen {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            background-color: rgb(1, 1, 90);
+            overflow: hidden;
+        }
+
+        .TitleScreen_logo {
+            display: block;
+            margin: 0 auto;
+            width: 548px;
+            image-rendering: pixelated;
+            position: relative;
+            z-index: 1; /* Ensure logo stays on top */
+        }
+
+        .TitleScreen button {
+            color: #000000;
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #ffffff;
+            border: none;
+            cursor: pointer;
+            width: 500px;
+            height: 50px;
+            font-size: 25px; /* Adjust font size as needed */
+            font-weight: bold; /* Make text bold */
+            border-radius: 15px;
+            position: relative;
+            z-index: 1; /* Ensure button stays on top */
+        }
+
+        .star {
+            position: absolute;
+            background-color: #ffffff;
+            border-radius: 50%;
+            animation: starMove 2s linear infinite; /* Adjusted duration */
+        }
+
+        @keyframes starMove {
+            0% { transform: translate(-50%, -50%); }
+            25% { transform: translate(20vw, 20vh); }
+            50% { transform: translate(0%, 0%); }
+            75% { transform: translate(-20vw, -20vh); }
+            100% { transform: translate(0%, 0%); }
+        }
+    </style>
+</head>
+<body>
+    <div class="TitleScreen">
+        <img class="TitleScreen_logo" src="images/logo.png" alt="Dream Walkers" />
+        <button id="startButton">Start Game</button>
+    </div>
+    
+    <script>
+        const numStars = 100;
+        const titleScreen = document.querySelector('.TitleScreen');
+        const startButton = document.getElementById('startButton');
+        
+        startButton.addEventListener('click', function() {
+            window.location.href = 'index.html';
+        });
+        
+        for (let i = 0; i < numStars; i++) {
+            const star = document.createElement('div');
+            star.classList.add('star');
+            star.style.width = Math.random() * 10 + 'px'; // Random size
+            star.style.height = star.style.width;
+            star.style.left = Math.random() * window.innerWidth + 'px';
+            star.style.top = Math.random() * window.innerHeight + 'px';
+            titleScreen.appendChild(star);
+        }
+    </script>
+</body>
+</html>
