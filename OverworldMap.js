@@ -7,82 +7,125 @@ class OverworldMap {
         this.lowerImage = new Image();
         this.lowerImage.src = config.lowerSrc;
 
-        //upper images
+        // upper images
         this.upperImage = new Image();
         this.upperImage.src = config.upperSrc;
 
+        // Load the game state from localStorage or initialize an empty object
+        this.loadGameState();
+    }
+
+    loadGameState() {
+        const gameStateJSON = localStorage.getItem('gameState');
+        if (gameStateJSON) {
+            const gameState = JSON.parse(gameStateJSON);
+            // Restore game objects' positions and walls
+            Object.keys(this.gameObjects).forEach(key => {
+                const gameObject = this.gameObjects[key];
+                gameObject.x = gameState.gameObjects[key].x;
+                gameObject.y = gameState.gameObjects[key].y;
+            });
+        } else {
+            // Reset walls to the initial state
+            this.walls = { ...config.walls };
+            // Save the initial state to local storage
+            this.saveGameState();
+        }
+    }
+    
+
+    // Save the game state to localStorage
+    saveGameState() {
+        const gameState = {
+            walls: this.walls,
+            // Save positions of game objects
+            gameObjects: {}
+        };
+        Object.keys(this.gameObjects).forEach(key => {
+            const gameObject = this.gameObjects[key];
+            gameState.gameObjects[key] = { x: gameObject.x, y: gameObject.y };
+        });
+        localStorage.setItem('gameState', JSON.stringify(gameState));
     }
 
     drawLowerImage(ctx, cameraPerson) {
         ctx.drawImage(
-            this.lowerImage, 
-            utils.withGrid(10.5) - cameraPerson.x, 
+            this.lowerImage,
+            utils.withGrid(10.5) - cameraPerson.x,
             utils.withGrid(6) - cameraPerson.y
-            )
+        );
     }
 
     drawUpperImage(ctx, cameraPerson) {
         ctx.drawImage(
-                this.upperImage, 
-                utils.withGrid(10.5) - cameraPerson.x, 
-                utils.withGrid(6) - cameraPerson.y
-            )
+            this.upperImage,
+            utils.withGrid(10.5) - cameraPerson.x,
+            utils.withGrid(6) - cameraPerson.y
+        );
     }
 
     isSpaceTaken(currentX, currentY, direction) {
-        const {x,y} = utils.nextPosition(currentX, currentY, direction);
+        const { x, y } = utils.nextPosition(currentX, currentY, direction);
         return this.walls[`${x},${y}`] || false;
     }
-    
+
     mountObjects() {
         Object.values(this.gameObjects).forEach(o => {
-
-            //TODO: determine if this object should actually mount
+            // TODO: determine if this object should actually mount
             o.mount(this);
-
-        })
+        });
     }
 
     addWall(x,y) {
-        this.walls[`${x},${y}`] = true;
+        this.walls[`${x},${y}`] = false;
     }
+
     removeWall(x,y) {
         delete this.walls[`${x},${y}`]
     }
+
     moveWall(wasX, wasY, direction) {
         const nextPosition = utils.nextPosition(wasX, wasY, direction);
         const { x, y } = nextPosition;
         this.removeWall(wasX, wasY);
         this.addWall(x, y);
     
-        // Check if the moveable character collides with any of the hitbox walls
-       // Check if the moveable character collides with any of the hitbox walls
+        // Check if the moved wall collides with any of the hitbox walls
         const hitboxWalls1 = [
             utils.asGridCoord(25, 32), // Left side
             utils.asGridCoord(25, 34), // Right side
             utils.asGridCoord(26, 33), // Top side
             utils.asGridCoord(24, 33)  // Bottom side
         ];
-
+    
         if (hitboxWalls1.includes(`${x},${y}`)) {
-            // Redirect to test6.html
             window.location.href = "test6.html";
+            // Save the player's position when triggering the redirection
+            this.gameObjects.hero.x = x;
+            this.gameObjects.hero.y = y;
+            this.saveGameState();
+            return; // Exit the method early to prevent further execution
         }
-
+    
         const hitboxWalls2 = [
             utils.asGridCoord(42, 39), // Left side
             utils.asGridCoord(43, 40), // Right side
             utils.asGridCoord(41, 40), // Top side
             utils.asGridCoord(42, 41)  // Bottom side
         ];
-
+    
         if (hitboxWalls2.includes(`${x},${y}`)) {
             window.location.href = "test.html";
+            // Save the player's position when triggering the redirection
+            this.gameObjects.hero.x = x;
+            this.gameObjects.hero.y = y;
+            this.saveGameState();
+            return; // Exit the method early to prevent further execution
         }
-
     }
     
-
+    
+    
 }
 
 window.OverworldMaps = {
@@ -229,10 +272,7 @@ window.OverworldMaps = {
             [utils.asGridCoord(60,11)] : true,
             [utils.asGridCoord(61,11)] : true,
             [utils.asGridCoord(62,11)] : true,
-
-            
-
-            
         }
     },
-}
+};
+

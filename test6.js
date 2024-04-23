@@ -129,8 +129,10 @@ function checkIfAllHidden(rectangles) {
         snakeContainer.style.display = 'none'; 
         const message = document.getElementById('message');
         message.style.display = 'block';
+        exitGame(); 
     }
 }
+
 
 function hideAllExceptBackground() {
   
@@ -147,3 +149,23 @@ function hideAllExceptBackground() {
     document.getElementById('message').style.display = 'block';
 }
 
+function exitGame() {
+    localStorage.setItem('previousPosition', JSON.stringify({ x: previousX, y: previousY }));
+    
+    window.location.href = "index.html"; 
+    
+}
+
+function getPreviousPosition() {
+    return JSON.parse(localStorage.getItem('previousPosition'));
+}
+
+// Initial position variables
+var previousX = 0;
+var previousY = 0;
+
+// Call this function when entering the shop scene to update the previous position
+function updatePreviousPosition(x, y) {
+    previousX = x;
+    previousY = y;
+}
