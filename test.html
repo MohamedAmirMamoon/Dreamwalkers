@@ -71,7 +71,7 @@
 
     .dialogue-text {
       color: #fff; 
-      font-size: 18px;
+      font-size: 40px;
       line-height: 1.5;
     }
 
@@ -162,7 +162,7 @@
       z-index: 1; /* Ensure it appears below other elements */
       display: none; /* Hidden by default */
       border-radius: 10px;
-      font-size: 20px;
+      font-size: 40px;
       color: white;
     }
 
@@ -189,19 +189,18 @@
     }
 
     .buy-button {
-      background-color: #7A1778; /* Purple color */
-      color: #fff; /* White text */
+      background-color: #7A1778; 
+      color: #fff; 
       border: none;
       border-radius: 5px;
       padding: 10px 20px;
       font-size: 16px;
       cursor: pointer;
       margin-top: 20px; 
-      opacity: 0.5; 
     }
 
     .buy-button.active {
-      opacity: 1; 
+      opacity: 0; 
     }
 
     .sell-item:nth-child(2),
@@ -221,6 +220,56 @@
       width: 50px;
       height:30px;
     }
+    .purple-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr); 
+      gap: 12px; 
+      justify-content: center; 
+      align-items: center; 
+      width: 80%; 
+      margin: auto;
+      margin-top: 20px; /* Add top margin */
+    }
+
+    .purple-item {
+      background-color: #7A1778;
+      height: 100px; 
+      border-radius: 15px;
+      width: 100px;
+    }
+
+
+    .purple-box {
+    background: #D47BB5;
+    height: 350px;
+    width: 450px;
+    border-radius: 10px; /* Rounded corners */
+    align-items: center; /* Center items */
+    position: fixed;
+    top: 40%; /* Adjusted top position */
+    left: 20%; /* Adjusted left position */
+    transform: translate(-50%, -50%); /* Center the box */
+    display: none; /* Initially hidden */
+    z-index: 10; /* Ensure it appears above other elements */
+    border: 15px solid rgb(80, 0, 82);
+    overflow: hidden; /* Ensure content inside the box does not overflow */
+  }
+
+  .back-button {
+    background-color: #7A1778;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 20px;
+    position: absolute; /* Position the button inside the purple box */
+    bottom: 20px; /* Adjust the distance from the bottom of the purple box */
+    left: 50%; /* Center the button horizontally */
+    transform: translateX(-50%); /* Center the button horizontally */
+  }
+
   </style>
 </head>
 <body>
@@ -228,7 +277,7 @@
   <div class="ui-container">
     <div class="options-box">
       <button class="ui-button buy" onclick="buy()">Buy</button>
-      <button class="ui-button sell" onclick="sell()">Sell</button>
+      <button class="ui-button sell" onclick="sell()">Bag</button>
       <button class="ui-button talk exit-button" onclick="exitGame()">Exit</button>
 
     </div>
@@ -245,13 +294,13 @@
       </div>
     </div>
     <div class="dialogue-box">
-      <div class="dialogue-text" id="dialogue">*Insert interesting dialogue here*</div>
+      <div class="dialogue-text" id="dialogue">Welcome to the dream shop...who even are you?</div>
     </div>
     <div class="left-side-box">
       <!-- Purple boxes in a row -->
       <div class="sell-row">
         <div class="sell-item" style="width: 800px;" onclick="buyItem('Healing Ivy')"> <!-- Adjusted width -->
-          <img src="images/medal.png" alt="Medal" style="float: left; margin-right: 10px;"> <!-- Image floated left -->
+          <img src="images/bigVine.png" alt="Medal" style="float: left; margin-right: 10px;"> <!-- Image floated left -->
           <div class="item-info">
             <h2>Healing Ivy</h2>
             <p>20 coins</p>
@@ -262,7 +311,7 @@
       
       <div class="sell-row">
         <div class="sell-item" style="width: 800px;" onclick="buyItem('Dream Lance')"> <!-- Adjusted width -->
-          <img src="images/medal.png" alt="Medal" style="float: left; margin-right: 10px;"> <!-- Image floated left -->
+          <img src="images/lanceBig.png" alt="Medal" style="float: left; margin-right: 10px;"> <!-- Image floated left -->
           <div class="item-info">
             <h2>Dream Lance</h2>
             <p>50 coins</p>
@@ -286,14 +335,60 @@
       </div>
       <!-- White box centered on bottom -->
       <div class="white-box bottom-white-box">
-        <button class="buy-button" onclick="buyItem()" disabled>BUY</button>
+        <button class="buy-button" onclick="goBack()" enabled>Back</button>
       </div>
     </div>
-    <div class="pink-box" id="pinkBox"></div> <!-- New pink box -->
-    <div class="coins-display" id="coinsDisplay">$100</div> <!-- Coins display -->
+    <div class="pink-box" id="pinkBox"></div> 
+    <div class="coins-display" id="coinsDisplay">$100</div> 
+  </div>
+  <div class="purple-box" id="bag">
+    <div class="purple-grid">
+      <div class="purple-item"></div>
+      <div class="purple-item"></div>
+      <div class="purple-item"></div>
+      <div class="purple-item"></div>
+      <div class="purple-item"></div>
+      <div class="purple-item"></div>
+      <div class="purple-item"></div>
+      <div class="purple-item"></div>
+    </div>
+    <button class="back-button" onclick="goBack()">Back</button>
   </div>
   
+
+  
   <script>
+
+function goBack() {
+  // Show the options box
+  var optionsBox = document.querySelector('.options-box');
+  optionsBox.style.display = 'block';
+  optionsBox.style.position = ''; // Reset position property
+
+  // Show the dialogue box
+  var dialogueBox = document.querySelector('.dialogue-box');
+  dialogueBox.style.display = 'block';
+  dialogueBox.style.position = ''; // Reset position property
+
+  // Hide the left-side box
+  var leftSideBox = document.querySelector('.left-side-box');
+  leftSideBox.style.display = 'none';
+
+  // Hide the white boxes
+  var whiteBoxes = document.querySelectorAll('.white-box');
+  whiteBoxes.forEach(function(box) {
+    box.style.display = 'none';
+  });
+
+  // Hide the pink box
+  var pinkBox = document.getElementById('pinkBox');
+  pinkBox.style.display = 'none';
+
+  // Show the purple box
+  var purpleBox = document.querySelector('.purple-box');
+  purpleBox.style.display = 'none';
+}
+
 
 var dialogues = [
       "Welcome dreamer, never seen you before...",
@@ -346,14 +441,48 @@ var dialogues = [
       // Ensure the dialogue box remains fixed in its position
       var dialogueBox = document.querySelector('.dialogue-box');
       dialogueBox.style.position = 'fixed';
+
+      var purpleBag = document.querySelector('.purple-box');
+      purpleBag.style.display = 'none';
+    }
+
+    function displayBoughtItems() {
+      var sellPanel = document.getElementById('sellPanel');
+      sellPanel.innerHTML = ''; // Clear previous content
+
+      // Loop through the bag object
+      for (var item in bag) {
+        if (bag.hasOwnProperty(item)) {
+          var imgSrc = bag[item];
+          // Create a new div element to hold the image
+          var itemDiv = document.createElement('div');
+          itemDiv.classList.add('sell-item');
+          var itemImg = document.createElement('img');
+          itemImg.src = imgSrc;
+          itemDiv.appendChild(itemImg);
+          sellPanel.appendChild(itemDiv);
+        }
+      }
+
+      // Show the sell panel
+      sellPanel.style.display = 'block';
     }
 
     function sell() {
-      toggleSellPanel(); // Toggle sell panel visibility
+      // Hide options box
+      var optionsBox = document.querySelector('.options-box');
+      optionsBox.style.display = 'block';
 
-      // Ensure the dialogue box remains fixed in its position
+      // Hide dialogue box
       var dialogueBox = document.querySelector('.dialogue-box');
-      dialogueBox.style.position = 'fixed';
+      dialogueBox.style.display = 'block';
+
+      // Display sell panel
+      displayBoughtItems();
+
+      // Show purple box
+      var purpleBox = document.querySelector('.purple-box');
+      purpleBox.style.display = 'block';
     }
 
     function exitGame() {
@@ -381,31 +510,74 @@ var dialogues = [
     }
 
 
-  function buyItem(itemName) {
-    var pinkBox = document.getElementById('pinkBox'); // Get the pink box element
+  // Create a bag object to store bought items and their images
+  var bag = JSON.parse(localStorage.getItem('bag')) || {};
 
-    if (itemName === 'Healing Ivy' && coins >= 20) {
-      coins -= 20;
-      updateCoinsDisplay();
-      pinkBox.textContent = "Bought Healing Ivy for 20 coins.";
-    } else if (itemName === 'Dream Lance' && coins >= 50) {
-      coins -= 50;
-      updateCoinsDisplay();
-      pinkBox.textContent = "Bought Dream Lance for 50 coins.";
-    } else if (itemName === 'Herbalist' && coins >= 60) {
-      coins -= 60;
-      updateCoinsDisplay();
-      pinkBox.textContent = "Bought Herbalist for 60 coins.";
-    } else {
-      pinkBox.textContent = "You don't have the funds for this item kid.";
-    }
+// Function to save the bag object to localStorage
+function saveBagToFile() {
+  localStorage.setItem('bag', JSON.stringify(bag));
+}
+
+// Display the bought items in the grid
+displayBoughtItems();
+
+function buyItem(itemName) {
+  var pinkBox = document.getElementById('pinkBox'); // Get the pink box element
+
+  if (itemName === 'Healing Ivy' && coins >= 20) {
+    coins -= 20;
+    updateCoinsDisplay();
+    pinkBox.textContent = "Bought Healing Ivy for 20 coins.";
+
+    // Add the bought item and its image to the bag object
+    bag[itemName] = "images/bigVine.png"; // Corrected image for Healing Ivy
+  } else if (itemName === 'Dream Lance' && coins >= 50) {
+    coins -= 50;
+    updateCoinsDisplay();
+    pinkBox.textContent = "Bought Dream Lance for 50 coins.";
+
+    // Add the bought item and its image to the bag object
+    bag[itemName] = "images/lanceBig.png"; // Corrected image for Dream Lance
+  } else if (itemName === 'Herbalist' && coins >= 60) {
+    coins -= 60;
+    updateCoinsDisplay();
+    pinkBox.textContent = "Bought Herbalist for 60 coins.";
+
+    // Add the bought item and its image to the bag object
+    bag[itemName] = "images/medal.png"; // Corrected image for Herbalist
   }
 
+  // Save the updated bag object to localStorage
+  saveBagToFile();
 
-      function updateCoinsDisplay() {
-        var coinsDisplay = document.getElementById('coinsDisplay');
-        coinsDisplay.textContent = "$ " + coins;
-      }
+  // Display the bought items in the purple grid
+  displayBoughtItems();
+}
+
+// Function to display bought items in the purple grid
+function displayBoughtItems() {
+  var purpleItems = document.querySelectorAll('.purple-item');
+
+  // Loop through the purple items and update their background images
+  purpleItems.forEach(function(purpleItem, index) {
+    if (bag.hasOwnProperty('Healing Ivy') && index === 0) {
+      purpleItem.style.backgroundImage = 'url(' + bag['Healing Ivy'] + ')';
+    } else if (bag.hasOwnProperty('Dream Lance') && index === 1) {
+      purpleItem.style.backgroundImage = 'url(' + bag['Dream Lance'] + ')';
+    } else if (bag.hasOwnProperty('Herbalist') && index === 2) {
+      purpleItem.style.backgroundImage = 'url(' + bag['Herbalist'] + ')';
+    } else {
+      // Reset background image if no item is bought
+      purpleItem.style.backgroundImage = 'none';
+    }
+  });
+}
+
+// Function to update coins display
+function updateCoinsDisplay() {
+  var coinsDisplay = document.getElementById('coinsDisplay');
+  coinsDisplay.textContent = "$ " + coins;
+}
   </script>
 </body>
 </html>
