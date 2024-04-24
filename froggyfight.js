@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function changeSnakeColor() {
-   const snake = document.getElementById('snake');
+   const snake = document.getElementById('frog');
    snake.style.filter = 'hue-rotate(180deg)';
    setTimeout(() => {
        snake.style.filter = 'none';
@@ -236,7 +236,7 @@ function checkIfAllHidden(rectangles) {
 
    if (allHidden) {
        clearInterval(snakeInterval);
-       const snakeContainer = document.querySelector('.snake-container');
+       const snakeContainer = document.querySelector('.frog-container');
        snakeContainer.style.display = 'none';
        const message = document.getElementById('message');
        message.style.display = 'block';

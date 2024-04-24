@@ -42,6 +42,28 @@ class Overworld {
         step();
     }
 
+    bindActionInput() {
+        new KeyPressListener("Enter", () => {
+          //Is there a person here to talk to?
+          this.map.checkForActionCutscene()
+        })
+    }
+
+    bindHeroPositionCheck() {
+        document.addEventListener("PersonWalkingComplete", e => {
+            if (e.detail.whoId === "hero") {
+            //Hero's position has changed
+            this.map.checkForFootstepCutscene()
+            }
+        })
+    }
+
+    startMap(mapConfig) {
+        this.map = new OverworldMap(mapConfig);
+        this.map.overworld = this;
+        this.map.mountObjects();
+    }
+
     init() {
         this.map = new OverworldMap(window.OverworldMaps.Jungle);
         this.map.mountObjects();
