@@ -174,8 +174,8 @@ createBagMenu() {
             // Restore game objects' positions and walls
             Object.keys(this.gameObjects).forEach(key => {
                 const gameObject = this.gameObjects[key];
-                gameObject.x = gameState.gameObjects[key].x;
-                gameObject.y = gameState.gameObjects[key].y;
+                // gameObject.x = gameState.gameObjects[key].x;
+                // gameObject.y = gameState.gameObjects[key].y;
             });
         } else {
             // Reset walls to the initial state
