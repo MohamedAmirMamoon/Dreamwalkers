@@ -1,5 +1,6 @@
 import { utils } from "../engine/utils.js";
 import { TWO_FRAME_ANIMATIONS } from "../engine/Sprite.js";
+import { rect, line, border, compose, subtract, points } from "../collision/walls.js";
 
 //Map entries are pure data blueprints. Nothing in here is a live game object:
 //OverworldMap instantiates a fresh set of game objects and copies the walls
@@ -130,6 +131,23 @@ export const OverworldMaps = {
           ]
         }
       },
+
+      // Bedroom is 22x12 tiles (352x198px — exactly one screen).
+      // Top half (rows 0-5) is the back wall + furniture.
+      // Right panel (rows 6-9, cols 13-21) is a raised accent wall with pictures.
+      // Bed frame legs extend into rows 6-7 at cols 0-2.
+      // Exit is at (2,6) — foot of the bed (go to sleep → dream transition).
+      // Out-of-bounds rows/cols seal the perimeter so the hero can't walk off-screen.
+      walls: compose(
+        rect(0, 0, 21, 5),         // entire back wall + furniture (top half)
+        rect(13, 6, 21, 9),        // right accent wall panel
+        points([[0,6],[1,6]]),      // bed frame (col 2 row 6 left open — it's the exit)
+        points([[0,7],[1,7],[2,7]]),// bed frame lower
+        line(-1, 0, -1, 12),       // left boundary (off-screen)
+        line(22, 0, 22, 12),       // right boundary (off-screen)
+        line(0, -1, 21, -1),       // top boundary (off-screen)
+        line(0, 12, 21, 12),       // bottom boundary (off-screen)
+      ),
 
       cutsceneSpaces: {
         [utils.asGridCoord(2,6)]: [
