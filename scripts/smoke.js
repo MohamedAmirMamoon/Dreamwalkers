@@ -402,13 +402,13 @@ async function testCutsceneSpaceGuards() {
   beachAgain.checkForFootstepCutscene();
   check("oneShot stays fired after leaving and re-entering the map", firedAgain.length === 0, firedAgain.length);
 
-  // --- repeatable space: Jungle snake at 27,31 / 27,32 / 27,33
+  // --- repeatable space: the Jungle snake's blocked path at 28,32
   overworld.startMap("Jungle");
   map = overworld.map;
   const snakeFired = [];
   map.startCutscene = events => snakeFired.push(events);
 
-  placeHero(map, 27, 32);
+  placeHero(map, 28, 32);
   map.checkForFootstepCutscene();
   check("snake space fires on arrival", snakeFired.length === 1, snakeFired.length);
 
@@ -416,19 +416,56 @@ async function testCutsceneSpaceGuards() {
   map.checkForFootstepCutscene();
   check("snake space does not re-fire on repeated footsteps", snakeFired.length === 1, snakeFired.length);
 
-  // the three snake tiles are adjacent, so stepping between them must not re-fire
-  placeHero(map, 27, 33);
+  // the pushback lands the hero 3 tiles east, clear of the one-tile guard, so
+  // the next attempt is allowed to fire again (it is not oneShot)
+  placeHero(map, 31, 32);
   map.checkForFootstepCutscene();
-  placeHero(map, 27, 31);
+  placeHero(map, 28, 32);
   map.checkForFootstepCutscene();
-  check("adjacent snake tiles do not re-fire the scene", snakeFired.length === 1, snakeFired.length);
+  check("snake space fires again after the pushback", snakeFired.length === 2, snakeFired.length);
 
-  // walking well away and coming back should fire again (it is not oneShot)
-  placeHero(map, 27, 36);
-  map.checkForFootstepCutscene();
-  placeHero(map, 27, 32);
-  map.checkForFootstepCutscene();
-  check("snake space fires again after leaving the area", snakeFired.length === 2, snakeFired.length);
+  // Terrain only: mountObjects turns every person's tile into a wall so that
+  // characters block each other, which would otherwise read as impassable art.
+  const terrain = { ...OverworldMaps.Jungle.walls };
+
+  // the pushback destination must be walkable, or the retry:true walks hang
+  const pushbackClear = [29, 30, 31].every(x => !terrain[`${x * 16},${32 * 16}`]);
+  check("pushback route east along row 32 is clear", pushbackClear);
+
+  // the snake itself has to seal row 31, otherwise the gate is walkable around
+  check(
+    "snake occupies (28,31) as a wall",
+    map.walls[`${28 * 16},${31 * 16}`] === true,
+  );
+
+  // (28,32) is the ONLY remaining opening: with it and the snake shut, nothing
+  // west of the gate is reachable from the hero's spawn.
+  const gated = reachableTiles(terrain, 29, 32, new Set(["28,31", "28,32"]));
+  check("west of the snake is sealed while the gate holds", !gated.has("25,33") && !gated.has("17,35"));
+  check("billy is still reachable on the near side", gated.has("40,30"));
+
+  // ...and opening the gate must genuinely restore the west, so the puzzle has
+  // somewhere to lead once the "do something" step exists.
+  const opened = reachableTiles(terrain, 29, 32, new Set(["28,31"]));
+  check("opening the gate reconnects the western trail", opened.has("25,33") && opened.has("17,35"));
+}
+
+// 4-directional flood fill over a wall set, minus extra blocked tiles.
+function reachableTiles(walls, startX, startY, blocked = new Set()) {
+  const open = (x, y) => !walls[`${x * 16},${y * 16}`] && !blocked.has(`${x},${y}`);
+  const seen = new Set([`${startX},${startY}`]);
+  const queue = [[startX, startY]];
+  while (queue.length) {
+    const [x, y] = queue.shift();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy, key = `${nx},${ny}`;
+      if (!seen.has(key) && nx >= 0 && ny >= 0 && nx < 90 && ny < 57 && open(nx, ny)) {
+        seen.add(key);
+        queue.push([nx, ny]);
+      }
+    }
+  }
+  return seen;
 }
 
 /* -------------------------------------------------- camera clamping (item 5) */

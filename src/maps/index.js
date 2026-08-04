@@ -198,8 +198,13 @@ export const OverworldMaps = {
           snake: {
             type: "Person",
             isPlayerControlled: false,
-            x: utils.withGrid(25),
-            y: utils.withGrid(33),
+            //Column 28 (rows 31-32) is the ONLY link between the spawn side of
+            //the trail and the 86 tiles to the west, so the snake is posted
+            //there to gate the forest. Its own tile becomes a wall on mount,
+            //sealing row 31; the one remaining gap, (28,32), is guarded by the
+            //blockedPath cutscene below.
+            x: utils.withGrid(28),
+            y: utils.withGrid(31),
             src: "/images/characters/people/snake.png",
             //snake.png is 64x32 - two 32x32 frames, not the usual 4x4 sheet
             animations: TWO_FRAME_ANIMATIONS,
@@ -321,30 +326,21 @@ export const OverworldMaps = {
             ]
           }
         ],
-        [utils.asGridCoord(27,31)]: [
+        //The snake blocks the only way west. Stepping into the one open tile of
+        //the gap (28,32) turns you back: it talks, then shoves the hero 3 tiles
+        //east. No oneShot - this repeats every attempt until the snake is dealt
+        //with. TODO: the "do something" that gets you past it isn't written yet;
+        //when it is, it should stop this space from firing.
+        [utils.asGridCoord(28,32)]: [
           {
             events: [
-              { who: "snake", type: "walk",  direction: "up" },
-              { who: "snake", type: "walk",  direction: "down" },
-              { type: "textMessage", text:"Hssss, sssoo sssHungry!"},
-            ]
-          }
-        ],
-        [utils.asGridCoord(27,32)]: [
-          {
-            events: [
-              { who: "snake", type: "walk",  direction: "up" },
-              { who: "snake", type: "walk",  direction: "down" },
-              { type: "textMessage", text:"Hssss, sssoo sssHungry!"},
-            ]
-          }
-        ],
-        [utils.asGridCoord(27,33)]: [
-          {
-            events: [
-              { who: "snake", type: "walk",  direction: "up" },
-              { who: "snake", type: "walk",  direction: "down" },
-              { type: "textMessage", text:"Hssss, sssoo sssHungry!"},
+              { who: "hero",  type: "stand", direction: "left", time: 200 },
+              { type: "textMessage", text:"Hssss, sssoo sssHungry! You ssshall not passss!"},
+              //Pushed back east along row 32 - cols 29/30/31 are all open path.
+              { who: "hero",  type: "walk",  direction: "right" },
+              { who: "hero",  type: "walk",  direction: "right" },
+              { who: "hero",  type: "walk",  direction: "right" },
+              { who: "hero",  type: "stand", direction: "left", time: 300 },
             ]
           }
         ],
