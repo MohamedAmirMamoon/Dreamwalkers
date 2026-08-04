@@ -1,0 +1,110 @@
+/* Backpack button, pinned to the top-right corner of the game screen. Kept
+   deliberately tiny (16px art at 1x) so it reads as an unobtrusive HUD icon
+   over the 352x198 canvas. */
+.Inventory_button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  z-index: 2;
+  -webkit-appearance: none;
+}
+.Inventory_button img {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+  display: block;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.4));
+}
+.Inventory_button:hover img,
+.Inventory_button.is-open img {
+  transform: scale(1.1);
+}
+
+/* The popout panel. Sits just under the bag in the top-right and never covers
+   the whole screen. */
+.Inventory_panel {
+  position: absolute;
+  top: 24px;
+  right: 4px;
+  width: 150px;
+  z-index: 3;
+  background: var(--menu-background);
+  border: 1px solid var(--menu-border-color);
+  border-radius: 4px;
+  color: var(--menu-font-color);
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.Inventory_panel[hidden] {
+  display: none;
+}
+
+.Inventory_header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 5px;
+  background: var(--border-color);
+  color: #fff;
+}
+.Inventory_title {
+  font-size: 10px;
+  font-weight: bold;
+}
+.Inventory_close {
+  -webkit-appearance: none;
+  background: none;
+  border: 0;
+  color: #fff;
+  font-size: 10px;
+  line-height: 1;
+  padding: 0 2px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.Inventory_list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+.Inventory_item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 4px;
+  font-size: 10px;
+  border-radius: 3px;
+}
+.Inventory_item + .Inventory_item {
+  margin-top: 2px;
+}
+.Inventory_item:hover {
+  background: var(--menu-selected-background);
+}
+.Inventory_icon {
+  font-size: 12px;
+  width: 14px;
+  text-align: center;
+}
+.Inventory_name {
+  flex: 1;
+}
+.Inventory_count {
+  opacity: 0.8;
+}
+.Inventory_empty {
+  font-size: 10px;
+  padding: 6px 4px;
+  text-align: center;
+  opacity: 0.85;
+}

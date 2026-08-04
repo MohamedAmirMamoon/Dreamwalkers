@@ -4,6 +4,7 @@ import { KeyPressListener } from "./KeyPressListener.js";
 import { OverworldMaps } from "../maps/index.js";
 import { utils } from "./utils.js";
 import { SceneTransition } from "../transitions/SceneTransition.js";
+import { Inventory } from "../ui/Inventory.js";
 
 export class Overworld {
 
@@ -19,6 +20,10 @@ export class Overworld {
         //(no updates, no input) so the scene holds still under the wipe.
         this.isTransitioning = false;
         this.transition = new SceneTransition(this.element);
+        //True while the inventory popout is open; freezes the overworld the same
+        //way a transition does, so the hero doesn't walk around underneath it.
+        this.isInventoryOpen = false;
+        this.inventory = null;
     }
 
     //Where the hero sits on screen, in canvas pixels - the circle closes on the
@@ -117,7 +122,7 @@ export class Overworld {
                     //do: nobody moves, no sprite animates, held arrow keys are
                     //ignored. We keep drawing so the frozen frame stays on
                     //screen (and so the new map paints once it's swapped in).
-                    if (!this.isTransitioning) {
+                    if (!this.isTransitioning && !this.isInventoryOpen) {
                         const arrow = this.directionInput.direction;
                         Object.values(map.gameObjects).forEach(object => {
                             object.update({
@@ -156,7 +161,7 @@ export class Overworld {
         new KeyPressListener("Enter", () => {
           //Is there a person here to talk to? Not while the screen is wiping -
           //a message box opening over the transition would strand the cutscene.
-          if (this.isTransitioning) {
+          if (this.isTransitioning || this.isInventoryOpen) {
             return;
           }
           this.map && this.map.checkForActionCutscene()
@@ -212,6 +217,12 @@ export class Overworld {
 
         this.bindActionInput();
         this.bindHeroPositionCheck();
+
+        this.inventory = new Inventory({
+            container: this.element,
+            onOpenChange: isOpen => { this.isInventoryOpen = isOpen; },
+        });
+        this.inventory.init();
 
         this.startGameLoop();
 

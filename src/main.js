@@ -1,6 +1,7 @@
 import "./styles/global.css";
 import "./styles/TextMessage.css";
 import "./styles/SceneTransition.css";
+import "./styles/Inventory.css";
 
 import { Overworld } from "./engine/Overworld.js";
 
