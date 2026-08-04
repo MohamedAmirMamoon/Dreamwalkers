@@ -2,6 +2,22 @@ import { utils } from "../engine/utils.js";
 import { TWO_FRAME_ANIMATIONS } from "../engine/Sprite.js";
 import { rect, line, border, compose, subtract, points, invert } from "../collision/walls.js";
 
+//The jungle snake turns you back the moment you come within one tile of it,
+//diagonals included. `face` is where the snake is from that tile, and `back` is
+//the 3-step retreat. Each tile needs its own route: the trail is not a uniform
+//corridor, and every step has to land on open path because these walks use
+//retry:true and would spin forever against a wall.
+const snakeBlock = (face, back) => [
+  {
+    events: [
+      { who: "hero", type: "stand", direction: face, time: 200 },
+      { type: "textMessage", text: "Hssss, sssoo sssHungry! You ssshall not passss!" },
+      ...back.map(direction => ({ who: "hero", type: "walk", direction })),
+      { who: "hero", type: "stand", direction: "left", time: 300 },
+    ]
+  }
+];
+
 //Map entries are pure data blueprints. Nothing in here is a live game object:
 //OverworldMap instantiates a fresh set of game objects and copies the walls
 //every time a map is mounted, so leaving and re-entering a map always replays
@@ -326,24 +342,24 @@ export const OverworldMaps = {
             ]
           }
         ],
-        //The snake blocks the only way west. Stepping into the one open tile of
-        //the gap (28,32) turns you back: it talks, then shoves the hero 3 tiles
-        //east. No oneShot - this repeats every attempt until the snake is dealt
-        //with. TODO: the "do something" that gets you past it isn't written yet;
-        //when it is, it should stop this space from firing.
-        [utils.asGridCoord(28,32)]: [
-          {
-            events: [
-              { who: "hero",  type: "stand", direction: "left", time: 200 },
-              { type: "textMessage", text:"Hssss, sssoo sssHungry! You ssshall not passss!"},
-              //Pushed back east along row 32 - cols 29/30/31 are all open path.
-              { who: "hero",  type: "walk",  direction: "right" },
-              { who: "hero",  type: "walk",  direction: "right" },
-              { who: "hero",  type: "walk",  direction: "right" },
-              { who: "hero",  type: "stand", direction: "left", time: 300 },
-            ]
-          }
-        ],
+        //The snake blocks the only way west, and it turns you back from any tile
+        //touching it - orthogonally or diagonally. Every guarded tile talks, then
+        //shoves the hero 3 tiles back to somewhere outside the ring, so the next
+        //approach re-triggers cleanly. None of these are oneShot: they repeat on
+        //every attempt until the snake is dealt with.
+        //TODO: the "do something" that gets you past it isn't written yet; when
+        //it is, it should stop these spaces from firing.
+        //
+        //Only the tiles reachable from the hero's side are listed. The three
+        //ring tiles west of the snake - (27,30), (27,31), (27,32) - are sealed
+        //off behind it, and an east pushback from there would walk straight into
+        //the snake's own wall and retry forever.
+        [utils.asGridCoord(28,32)]: snakeBlock("up",   ["right","right","right"]),
+        [utils.asGridCoord(29,31)]: snakeBlock("left", ["right","right","right"]),
+        [utils.asGridCoord(29,30)]: snakeBlock("left", ["right","right","right"]),
+        //Row 32 dead-ends at col 31, so this one veers up on its last step
+        //instead of walking into the wall at (32,32).
+        [utils.asGridCoord(29,32)]: snakeBlock("left", ["right","right","up"]),
       },
 
     },

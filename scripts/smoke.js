@@ -428,9 +428,44 @@ async function testCutsceneSpaceGuards() {
   // characters block each other, which would otherwise read as impassable art.
   const terrain = { ...OverworldMaps.Jungle.walls };
 
-  // the pushback destination must be walkable, or the retry:true walks hang
-  const pushbackClear = [29, 30, 31].every(x => !terrain[`${x * 16},${32 * 16}`]);
-  check("pushback route east along row 32 is clear", pushbackClear);
+  // --- every tile touching the snake, diagonals included, must turn you back.
+  // Walk the authored routes against real terrain: a step onto a wall would make
+  // the retry:true pushback spin forever and soft-lock the game.
+  const jungleSpaces = OverworldMaps.Jungle.cutsceneSpaces;
+  const SNAKE = [28, 31];
+  const inRing = (x, y) => Math.abs(x - SNAKE[0]) <= 1 && Math.abs(y - SNAKE[1]) <= 1;
+  // reachable from the hero's side, treating the snake as a wall and each guarded
+  // tile as terminal (the cutscene takes over the moment you step on it)
+  const guardedKeys = new Set(
+    Object.keys(jungleSpaces)
+      .map(k => k.split(",").map(n => Number(n) / 16).join(","))
+      .filter(k => { const [x, y] = k.split(",").map(Number); return inRing(x, y); })
+  );
+  check("all four reachable ring tiles are guarded", guardedKeys.size === 4, [...guardedKeys].join(" "));
+
+  for (const key of guardedKeys) {
+    const [tx, ty] = key.split(",").map(Number);
+    const events = jungleSpaces[`${tx * 16},${ty * 16}`][0].events;
+    check(`snake ring (${tx},${ty}) shows a message`, events.some(e => e.type === "textMessage"));
+
+    let x = tx, y = ty;
+    let blocked = null;
+    const steps = events.filter(e => e.type === "walk");
+    for (const walkStep of steps) {
+      if (walkStep.direction === "right") x += 1;
+      else if (walkStep.direction === "left") x -= 1;
+      else if (walkStep.direction === "up") y -= 1;
+      else y += 1;
+      // the snake's own tile is a wall too, not just terrain
+      if (terrain[`${x * 16},${y * 16}`] || (x === SNAKE[0] && y === SNAKE[1])) {
+        blocked = `${x},${y}`;
+        break;
+      }
+    }
+    check(`snake ring (${tx},${ty}) pushback never hits a wall`, blocked === null, blocked);
+    check(`snake ring (${tx},${ty}) pushback is 3 tiles`, steps.length === 3, steps.length);
+    check(`snake ring (${tx},${ty}) pushback ends clear of the ring`, !inRing(x, y), `${x},${y}`);
+  }
 
   // the snake itself has to seal row 31, otherwise the gate is walkable around
   check(
