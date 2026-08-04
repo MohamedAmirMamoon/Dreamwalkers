@@ -1,0 +1,143 @@
+/* Pokemon-style level transition: white flash, iris wipe closing on the hero,
+   level title card, iris opening onto the new map.
+
+   The overlay lives inside .game-container (352x198, CSS-scaled 3x), so all
+   sizes here are in the game's internal pixel space. */
+
+.SceneTransition {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;   /* must never eat clicks when idle */
+  z-index: 5;             /* above the canvas, below TextMessage (which is unset/auto in flow) */
+  visibility: hidden;
+}
+
+.SceneTransition.is-active {
+  visibility: visible;
+}
+
+/* ------------------------------------------------------------------- iris */
+/* A black layer with a transparent hole punched in it. Growing the hole to
+   250% reveals the map; shrinking it to 0 covers the screen. Animating
+   background-size keeps the circle edge hard, which suits pixel art better
+   than animating a blurred mask. */
+.SceneTransition_iris {
+  position: absolute;
+  inset: 0;
+  --iris-x: 50%;
+  --iris-y: 50%;
+  background: radial-gradient(
+    circle at var(--iris-x) var(--iris-y),
+    transparent 0,
+    transparent 62%,
+    #000 64%,
+    #000 100%
+  );
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 250% 250%;
+  transition: background-size 460ms steps(14, end);
+}
+
+/* Closed: the hole has shrunk to nothing, screen is solid black. */
+.SceneTransition.is-closed .SceneTransition_iris {
+  background-size: 0% 0%;
+}
+
+/* Opening is slightly slower than closing - it reads as arriving somewhere. */
+.SceneTransition:not(.is-closed) .SceneTransition_iris {
+  transition-duration: 520ms;
+}
+
+/* ------------------------------------------------------------------ flash */
+.SceneTransition_flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+}
+
+.SceneTransition.is-flashing .SceneTransition_flash {
+  opacity: 0.85;
+}
+
+/* ------------------------------------------------------------- title card */
+.SceneTransition_card {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 200ms ease-out, transform 200ms ease-out;
+}
+
+.SceneTransition.is-titled .SceneTransition_card {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.SceneTransition_title {
+  margin: 0;
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+  font-size: 17px;
+  font-weight: bold;
+  color: var(--dialog-background);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-shadow: 0 2px 0 var(--border-color);
+
+  transition: letter-spacing 700ms ease-out;
+}
+
+.SceneTransition.is-titled .SceneTransition_title {
+  letter-spacing: 1px;
+}
+
+.SceneTransition_subtitle {
+  margin: 0;
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+  font-size: 9px;
+  color: var(--menu-selected-background);
+  letter-spacing: 1px;
+  font-style: italic;
+}
+
+/* A thin rule under the title, drawn in the dialog palette. */
+.SceneTransition_card::after {
+  content: "";
+  width: 78px;
+  height: 1px;
+  margin-top: 2px;
+  background: var(--menu-selected-background);
+  opacity: 0;
+  transition: opacity 260ms ease-out 120ms, width 620ms ease-out;
+}
+
+.SceneTransition.is-titled .SceneTransition_card::after {
+  opacity: 0.75;
+  width: 132px;
+}
+
+/* --------------------------------------------------- reduced motion */
+/* Collapse to a near-instant cut rather than animating. */
+.SceneTransition.is-reduced .SceneTransition_iris,
+.SceneTransition.is-reduced .SceneTransition_card,
+.SceneTransition.is-reduced .SceneTransition_title,
+.SceneTransition.is-reduced .SceneTransition_card::after {
+  transition-duration: 60ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .SceneTransition_iris,
+  .SceneTransition_card,
+  .SceneTransition_title,
+  .SceneTransition_card::after {
+    transition-duration: 60ms !important;
+  }
+}

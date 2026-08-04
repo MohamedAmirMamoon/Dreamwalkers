@@ -3,6 +3,7 @@ import { DirectionInput } from "./DirectionInput.js";
 import { KeyPressListener } from "./KeyPressListener.js";
 import { OverworldMaps } from "../maps/index.js";
 import { utils } from "./utils.js";
+import { SceneTransition } from "../transitions/SceneTransition.js";
 
 export class Overworld {
 
@@ -14,6 +15,77 @@ export class Overworld {
         this.isGameLoopRunning = false;
         //Keyed "MapId:x,y" - one-shot cutscene spaces that have already fired.
         this.completedOneShots = {};
+        //True for the whole duration of a scene transition. Gates all input so
+        //the hero can't walk and dialogue can't open while the screen is wiping.
+        this.isTransitioning = false;
+        this.transition = new SceneTransition(this.element);
+    }
+
+    //Where the hero currently sits on screen, in percent - the iris closes on
+    //that point rather than the middle of the canvas.
+    getHeroOriginPercent() {
+        const map = this.map;
+        const hero = map && map.gameObjects.hero;
+        if (!hero || !this.canvas) {
+            return { x: 50, y: 50 };
+        }
+        const camera = map.getCamera(hero, this.canvas);
+        const screenX = hero.x + camera.x - hero.x;
+        const screenY = hero.y + camera.y - hero.y;
+        return {
+            x: clampPercent((screenX / this.canvas.width) * 100),
+            y: clampPercent((screenY / this.canvas.height) * 100),
+        };
+    }
+
+    //Resolves once the map's art has actually decoded, so the iris never opens
+    //onto a blank screen the first time a big map is visited.
+    waitForMapArt(map, timeout = 2500) {
+        const image = map && map.lowerImage;
+        if (!image || image.complete || image.naturalWidth) {
+            return Promise.resolve();
+        }
+        return new Promise(resolve => {
+            let settled = false;
+            const finish = () => {
+                if (settled) return;
+                settled = true;
+                image.removeEventListener && image.removeEventListener("load", finish);
+                image.removeEventListener && image.removeEventListener("error", finish);
+                resolve();
+            };
+            //Don't hang the transition forever if the asset 404s.
+            setTimeout(finish, timeout);
+            if (image.addEventListener) {
+                image.addEventListener("load", finish);
+                image.addEventListener("error", finish);
+            } else {
+                resolve();
+            }
+        });
+    }
+
+    //Swaps maps behind a Pokemon-style iris wipe + title card. Returns a promise
+    //that settles only once the new map is fully revealed, so the caller can
+    //keep the player locked out for the whole animation.
+    async transitionToMap(mapId) {
+        if (this.isTransitioning) {
+            return;
+        }
+        this.isTransitioning = true;
+        const origin = this.getHeroOriginPercent();
+        try {
+            await this.transition.play({
+                mapId,
+                origin,
+                swap: async () => {
+                    this.startMap(mapId);
+                    await this.waitForMapArt(this.map);
+                },
+            });
+        } finally {
+            this.isTransitioning = false;
+        }
     }
 
     startGameLoop() {
@@ -34,10 +106,15 @@ export class Overworld {
                 const cameraPerson = map.gameObjects.hero;
 
                 if (cameraPerson) {
+                    //Swallow held arrow keys for the whole transition, otherwise
+                    //the hero keeps walking behind the wipe and arrives somewhere
+                    //other than the new map's spawn point.
+                    const arrow = this.isTransitioning ? null : this.directionInput.direction;
+
                     //Update all objects
                     Object.values(map.gameObjects).forEach(object => {
                         object.update({
-                        arrow: this.directionInput.direction,
+                        arrow,
                         map,
                         })
                     })
@@ -67,7 +144,11 @@ export class Overworld {
 
     bindActionInput() {
         new KeyPressListener("Enter", () => {
-          //Is there a person here to talk to?
+          //Is there a person here to talk to? Not while the screen is wiping -
+          //a message box opening over the transition would strand the cutscene.
+          if (this.isTransitioning) {
+            return;
+          }
           this.map && this.map.checkForActionCutscene()
         })
     }
@@ -75,7 +156,11 @@ export class Overworld {
     bindHeroPositionCheck() {
         document.addEventListener("PersonWalkingComplete", e => {
             if (e.detail.whoId === "hero") {
-            //Hero's position has changed
+            //Hero's position has changed. Ignore steps that land during a
+            //transition so the destination's own footstep triggers can't fire early.
+            if (this.isTransitioning) {
+                return;
+            }
             this.map && this.map.checkForFootstepCutscene()
             }
         })
