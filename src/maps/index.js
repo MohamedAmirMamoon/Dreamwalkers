@@ -175,7 +175,16 @@ export const OverworldMaps = {
               isPlayerControlled: false,
               x: utils.withGrid(40),
               y: utils.withGrid(30),
-              src: "/images/characters/people/billy.png"
+              //Face the camera so you see his front, not the back of his head.
+              direction: "down",
+              src: "/images/characters/people/billy.png",
+              talking: [
+                {
+                  events: [
+                    { type: "textMessage", text: "aah im lost... where do i go!", faceHero: "billy" },
+                  ]
+                }
+              ]
           },
           snake: {
             type: "Person",
