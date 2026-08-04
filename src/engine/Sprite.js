@@ -94,7 +94,9 @@ export class Sprite {
         }
     }
 
-    draw(ctx, cameraPerson, camera) {
+    //`advanceAnimation: false` redraws the current frame without ticking the
+    //animation forward - used to hold the world still during a scene transition.
+    draw(ctx, cameraPerson, camera, advanceAnimation = true) {
         const offset = camera || { x: utils.withGrid(10.5), y: utils.withGrid(6) };
         const x = this.gameObject.x - 8 + offset.x - cameraPerson.x;
         const y = this.gameObject.y - 18 + offset.y - cameraPerson.y;
@@ -112,6 +114,8 @@ export class Sprite {
             this.frameWidth, this.frameHeight
         )
 
-        this.updateAnimationProgress();
+        if (advanceAnimation) {
+            this.updateAnimationProgress();
+        }
     }
 }

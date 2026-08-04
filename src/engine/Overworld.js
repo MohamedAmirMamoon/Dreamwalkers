@@ -15,29 +15,32 @@ export class Overworld {
         this.isGameLoopRunning = false;
         //Keyed "MapId:x,y" - one-shot cutscene spaces that have already fired.
         this.completedOneShots = {};
-        //True for the whole duration of a scene transition. Gates all input so
-        //the hero can't walk and dialogue can't open while the screen is wiping.
+        //True for the whole duration of a scene transition. Freezes the world
+        //(no updates, no input) so the scene holds still under the wipe.
         this.isTransitioning = false;
         this.transition = new SceneTransition(this.element);
     }
 
-    //Where the hero currently sits on screen, in percent - the iris closes on
-    //that point rather than the middle of the canvas.
-    getHeroOriginPercent() {
+    //Where the hero sits on screen, in canvas pixels - the circle closes on the
+    //character rather than the middle of the screen. The overlay is the same
+    //352x198 box as the canvas, so these coordinates map straight across.
+    getHeroOriginPixels() {
+        const fallback = {
+            x: this.canvas ? this.canvas.width / 2 : 176,
+            y: this.canvas ? this.canvas.height / 2 : 99,
+        };
         const map = this.map;
         const hero = map && map.gameObjects.hero;
         if (!hero || !this.canvas) {
-            return { x: 50, y: 50 };
+            return fallback;
         }
         //Sprite.draw puts the hero at (camera.x - 8, camera.y - 18) on screen,
         //since for the camera person the world terms cancel. Nudge to the middle
-        //of the 32x32 sprite so the iris closes on the character, not its corner.
+        //of the 32x32 sprite so the circle closes on the character, not its corner.
         const camera = map.getCamera(hero, this.canvas);
-        const screenX = camera.x - 8 + 16;
-        const screenY = camera.y - 18 + 20;
         return {
-            x: clampPercent((screenX / this.canvas.width) * 100),
-            y: clampPercent((screenY / this.canvas.height) * 100),
+            x: clampTo(camera.x - 8 + 16, this.canvas.width, fallback.x),
+            y: clampTo(camera.y - 18 + 20, this.canvas.height, fallback.y),
         };
     }
 
@@ -68,18 +71,19 @@ export class Overworld {
         });
     }
 
-    //Swaps maps behind a Pokemon-style iris wipe + title card. Returns a promise
-    //that settles only once the new map is fully revealed, so the caller can
-    //keep the player locked out for the whole animation.
+    //Swaps maps behind the circle wipe. Returns a promise that settles only once
+    //the new map is fully revealed, so the world stays frozen for the whole
+    //animation.
     async transitionToMap(mapId) {
         if (this.isTransitioning) {
             return;
         }
+        const origin = this.getHeroOriginPixels();
+        //Read the origin BEFORE freezing so the last drawn frame is what the
+        //circle closes on.
         this.isTransitioning = true;
-        const origin = this.getHeroOriginPercent();
         try {
             await this.transition.play({
-                mapId,
                 origin,
                 swap: async () => {
                     this.startMap(mapId);
@@ -109,18 +113,19 @@ export class Overworld {
                 const cameraPerson = map.gameObjects.hero;
 
                 if (cameraPerson) {
-                    //Swallow held arrow keys for the whole transition, otherwise
-                    //the hero keeps walking behind the wipe and arrives somewhere
-                    //other than the new map's spawn point.
-                    const arrow = this.isTransitioning ? null : this.directionInput.direction;
-
-                    //Update all objects
-                    Object.values(map.gameObjects).forEach(object => {
-                        object.update({
-                        arrow,
-                        map,
+                    //Freeze the world for the whole wipe, the way the old games
+                    //do: nobody moves, no sprite animates, held arrow keys are
+                    //ignored. We keep drawing so the frozen frame stays on
+                    //screen (and so the new map paints once it's swapped in).
+                    if (!this.isTransitioning) {
+                        const arrow = this.directionInput.direction;
+                        Object.values(map.gameObjects).forEach(object => {
+                            object.update({
+                            arrow,
+                            map,
+                            })
                         })
-                    })
+                    }
 
                     //One clamped camera offset per frame, shared by every layer
                     const camera = map.getCamera(cameraPerson, this.canvas);
@@ -128,9 +133,11 @@ export class Overworld {
                     // draw lower layer
                     map.drawLowerImage(this.ctx, cameraPerson, camera);
 
-                    //Draw Game Objects
+                    //Draw Game Objects. Sprite.draw ticks its own animation, so
+                    //it needs telling not to while the world is frozen.
+                    const advance = !this.isTransitioning;
                     Object.values(map.gameObjects).forEach(object => {
-                        object.sprite.draw(this.ctx, cameraPerson, camera);
+                        object.sprite.draw(this.ctx, cameraPerson, camera, advance);
                     })
 
                     // draw upper layer
@@ -211,7 +218,6 @@ export class Overworld {
         //Open on the starting level with the same wipe, rather than popping in.
         this.isTransitioning = true;
         this.transition.playIntro({
-            mapId: "Bedroom",
             swap: async () => {
                 this.startMap("Bedroom");
                 await this.waitForMapArt(this.map);
@@ -223,9 +229,11 @@ export class Overworld {
 
 }
 
-function clampPercent(value) {
+//Keep the circle's centre inside the viewport, and fall back to the middle if
+//the camera math ever produces something non-finite.
+function clampTo(value, max, fallback) {
     if (!Number.isFinite(value)) {
-        return 50;
+        return fallback;
     }
-    return Math.min(Math.max(value, 0), 100);
+    return Math.min(Math.max(value, 0), max);
 }
