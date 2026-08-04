@@ -45,8 +45,16 @@
   background-size: 0% 0%;
 }
 
+/* While the title card is up the screen must stay FULLY black - a plain fill,
+   with no gradient edge that could reveal the map behind the text. */
+.SceneTransition.is-titled .SceneTransition_iris {
+  background: #000;
+  background-size: auto;
+  transition: none;
+}
+
 /* Opening is slightly slower than closing - it reads as arriving somewhere. */
-.SceneTransition:not(.is-closed) .SceneTransition_iris {
+.SceneTransition.is-opening .SceneTransition_iris {
   transition-duration: 520ms;
 }
 

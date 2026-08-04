@@ -29,9 +29,12 @@ export class Overworld {
         if (!hero || !this.canvas) {
             return { x: 50, y: 50 };
         }
+        //Sprite.draw puts the hero at (camera.x - 8, camera.y - 18) on screen,
+        //since for the camera person the world terms cancel. Nudge to the middle
+        //of the 32x32 sprite so the iris closes on the character, not its corner.
         const camera = map.getCamera(hero, this.canvas);
-        const screenX = hero.x + camera.x - hero.x;
-        const screenY = hero.y + camera.y - hero.y;
+        const screenX = camera.x - 8 + 16;
+        const screenY = camera.y - 18 + 20;
         return {
             x: clampPercent((screenX / this.canvas.width) * 100),
             y: clampPercent((screenY / this.canvas.height) * 100),
@@ -200,12 +203,29 @@ export class Overworld {
         this.directionInput = new DirectionInput();
         this.directionInput.init();
 
-        this.startMap("Bedroom");
-
         this.bindActionInput();
         this.bindHeroPositionCheck();
 
         this.startGameLoop();
+
+        //Open on the starting level with the same wipe, rather than popping in.
+        this.isTransitioning = true;
+        this.transition.playIntro({
+            mapId: "Bedroom",
+            swap: async () => {
+                this.startMap("Bedroom");
+                await this.waitForMapArt(this.map);
+            },
+        }).finally(() => {
+            this.isTransitioning = false;
+        });
     }
 
+}
+
+function clampPercent(value) {
+    if (!Number.isFinite(value)) {
+        return 50;
+    }
+    return Math.min(Math.max(value, 0), 100);
 }

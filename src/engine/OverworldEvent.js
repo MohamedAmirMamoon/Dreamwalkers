@@ -97,7 +97,18 @@ export class OverworldEvent {
       //continuing to run events against the map we're about to destroy. It sees
       //isActive === false on the next iteration and stops.
       resolve();
-      this.map.overworld.startMap(this.event.map);
+
+      const overworld = this.map.overworld;
+      if (!overworld) {
+        return;
+      }
+      //Play the wipe when there is one; fall back to an instant swap so the
+      //engine still works headless (the smoke harness has no CSS or layout).
+      if (typeof overworld.transitionToMap === "function") {
+        overworld.transitionToMap(this.event.map);
+      } else {
+        overworld.startMap(this.event.map);
+      }
     }
 
     init() {

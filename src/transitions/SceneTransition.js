@@ -30,7 +30,16 @@ export class SceneTransition {
     if (!this.container || typeof document === "undefined" || !document.createElement) {
       return;
     }
-    this.element = document.createElement("div");
+    const element = document.createElement("div");
+    //Only drive the overlay when we have a real element to drive. Headless
+    //hosts (tests, SSR) get a no-op transition instead of a crash.
+    if (!element || !element.classList
+        || typeof element.classList.add !== "function"
+        || typeof element.classList.remove !== "function"
+        || typeof element.classList.toggle !== "function") {
+      return;
+    }
+    this.element = element;
     this.element.classList.add("SceneTransition");
     this.element.innerHTML = `
       <div class="SceneTransition_iris"></div>
@@ -93,6 +102,16 @@ export class SceneTransition {
     }
     this.isPlaying = true;
 
+    //No overlay to animate (headless): just do the swap, instantly.
+    if (!this.element) {
+      try {
+        if (swap) await swap();
+      } finally {
+        this.isPlaying = false;
+      }
+      return;
+    }
+
     const reduced = this.prefersReducedMotion();
     const t = reduced
       ? { flash: 0, irisClose: TIMING.reduced, titleHold: TIMING.reduced, irisOpen: TIMING.reduced }
@@ -122,15 +141,18 @@ export class SceneTransition {
 
       //Title card over the covered screen
       await this.step("is-titled", true, t.titleHold);
-      await this.step("is-titled", false, reduced ? 0 : 180);
+      //Fade the text out while the screen is still solid black, so the map is
+      //never visible behind the title.
+      await this.step("is-titled", false, reduced ? 0 : 200);
 
       //Open onto the new map
+      await this.step("is-opening", true, 0);
       await this.step("is-closed", false, t.irisOpen);
     } finally {
       //Whatever happened, the overlay must end up transparent and click-through.
       //A stuck opaque overlay is a hard-locked game.
       if (this.element) {
-        this.element.classList.remove("is-active", "is-flashing", "is-titled", "is-closed", "is-reduced");
+        this.element.classList.remove("is-active", "is-flashing", "is-titled", "is-closed", "is-opening", "is-reduced");
       }
       this.isPlaying = false;
     }
@@ -143,6 +165,15 @@ export class SceneTransition {
       return;
     }
     this.isPlaying = true;
+
+    if (!this.element) {
+      try {
+        if (swap) await swap();
+      } finally {
+        this.isPlaying = false;
+      }
+      return;
+    }
 
     const reduced = this.prefersReducedMotion();
     const t = reduced
@@ -160,11 +191,12 @@ export class SceneTransition {
         await swap();
       }
       await this.step("is-titled", true, t.titleHold);
-      await this.step("is-titled", false, reduced ? 0 : 180);
+      await this.step("is-titled", false, reduced ? 0 : 200);
+      await this.step("is-opening", true, 0);
       await this.step("is-closed", false, t.irisOpen);
     } finally {
       if (this.element) {
-        this.element.classList.remove("is-active", "is-flashing", "is-titled", "is-closed", "is-reduced");
+        this.element.classList.remove("is-active", "is-flashing", "is-titled", "is-closed", "is-opening", "is-reduced");
       }
       this.isPlaying = false;
     }
