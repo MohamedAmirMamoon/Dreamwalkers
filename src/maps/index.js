@@ -1,17 +1,23 @@
-import { Person } from "../engine/Person.js";
 import { utils } from "../engine/utils.js";
+import { TWO_FRAME_ANIMATIONS } from "../engine/Sprite.js";
 
+//Map entries are pure data blueprints. Nothing in here is a live game object:
+//OverworldMap instantiates a fresh set of game objects and copies the walls
+//every time a map is mounted, so leaving and re-entering a map always replays
+//the authored spawn points / behavior loops / wall layout.
 export const OverworldMaps = {
     DemoRoom: {
       lowerSrc: "/images/maps/DemoLower.png",
       upperSrc: "/images/maps/DemoUpper.png",
       gameObjects: {
-        hero: new Person({
+        hero: {
+          type: "Person",
           isPlayerControlled: true,
           x: utils.withGrid(5),
           y: utils.withGrid(6),
-        }),
-        npcA: new Person({
+        },
+        npcA: {
+          type: "Person",
           x: utils.withGrid(7),
           y: utils.withGrid(9),
           src: "/images/characters/people/npc1.png",
@@ -30,19 +36,13 @@ export const OverworldMaps = {
               ]
             }
           ]
-        }),
-        npcB: new Person({
+        },
+        npcB: {
+          type: "Person",
           x: utils.withGrid(8),
           y: utils.withGrid(5),
           src: "/images/characters/people/npc2.png",
-          // behaviorLoop: [
-          //   { type: "walk",  direction: "left" },
-          //   { type: "stand",  direction: "up", time: 800 },
-          //   { type: "walk",  direction: "up" },
-          //   { type: "walk",  direction: "right" },
-          //   { type: "walk",  direction: "down" },
-          // ]
-        }),
+        },
       },
       walls: {
         [utils.asGridCoord(7,6)] : true,
@@ -71,18 +71,20 @@ export const OverworldMaps = {
           }
         ]
       }
-      
+
     },
     Kitchen: {
       lowerSrc: "/images/maps/KitchenLower.png",
       upperSrc: "/images/maps/KitchenUpper.png",
       gameObjects: {
-        hero: new Person({
+        hero: {
+          type: "Person",
           isPlayerControlled: true,
           x: utils.withGrid(5),
           y: utils.withGrid(5),
-        }),
-        npcB: new Person({
+        },
+        npcB: {
+          type: "Person",
           x: utils.withGrid(10),
           y: utils.withGrid(8),
           src: "/images/characters/people/npc3.png",
@@ -93,21 +95,22 @@ export const OverworldMaps = {
               ]
             }
           ]
-        })
+        }
       }
     },
 
     Bedroom: {
       lowerSrc: "/images/maps/bedroom_v2.png",
-      upperSrc: "",
 
       gameObjects: {
-        hero: new Person({
+        hero: {
+          type: "Person",
           isPlayerControlled: true,
           x: utils.withGrid(17),
           y: utils.withGrid(10),
-        }),
-        dreamkeeper: new Person({
+        },
+        dreamkeeper: {
+          type: "Person",
           x: utils.withGrid(10),
           y: utils.withGrid(8),
           src: "/images/characters/people/npc3.png",
@@ -125,7 +128,7 @@ export const OverworldMaps = {
               ]
             }
           ]
-        })
+        }
       },
 
       cutsceneSpaces: {
@@ -138,45 +141,47 @@ export const OverworldMaps = {
         ]
       }
     },
-  
+
     Jungle: {
-      lowerSrc: "/images//biggerJungle.png",
-      upperSrc: "/images/maps/KitchenUpper.png",
+      lowerSrc: "/images/biggerJungle.png",
 
       gameObjects: {
-          hero: new Person({
+          hero: {
+              type: "Person",
               isPlayerControlled: true,
               x: utils.withGrid(29),
               y: utils.withGrid(32),
-          }),
-          billy: new Person({
+          },
+          billy: {
+              type: "Person",
               isPlayerControlled: false,
               x: utils.withGrid(40),
               y: utils.withGrid(30),
               src: "/images/characters/people/billy.png"
-          }),
-          snake: new Person({
+          },
+          snake: {
+            type: "Person",
             isPlayerControlled: false,
             x: utils.withGrid(25),
             y: utils.withGrid(33),
-            src: "/images/characters/people/snake.png"
-          })
+            src: "/images/characters/people/snake.png",
+            //snake.png is 64x32 - two 32x32 frames, not the usual 4x4 sheet
+            animations: TWO_FRAME_ANIMATIONS,
+          }
       },
       walls: {
           [utils.asGridCoord(19,35)] : true,
           [utils.asGridCoord(19,36)] : true,
           [utils.asGridCoord(18,37)] : true,
           [utils.asGridCoord(17,38)] : true,
-          [utils.asGridCoord(17,38)] : true,
-          [utils.asGridCoord(17,38)] : true,
           [utils.asGridCoord(17,39)] : true,
           [utils.asGridCoord(17,40)] : true,
           [utils.asGridCoord(17,41)] : true,
-  
+
           // here is above where character starts
           [utils.asGridCoord(19,34)] : true,
           [utils.asGridCoord(19,33)] : true,
-         
+
           [utils.asGridCoord(15,31)] : true,
           [utils.asGridCoord(16,30)] : true,
           [utils.asGridCoord(16,32)] : true,
@@ -237,10 +242,6 @@ export const OverworldMaps = {
           [utils.asGridCoord(60,11)] : true,
           [utils.asGridCoord(61,11)] : true,
           [utils.asGridCoord(62,11)] : true,
-  
-          
-  
-          
       },
 
       cutsceneSpaces: {
@@ -279,30 +280,31 @@ export const OverworldMaps = {
           }
         ],
       },
-      
+
     },
     Beach: {
       lowerSrc: "/images/maps/beach.png",
-      upperSrc: "",
 
       gameObjects: {
-        hero: new Person({
+        hero: {
+          type: "Person",
           isPlayerControlled: true,
           x: utils.withGrid(12),
           y: utils.withGrid(32),
-        }),
-        Ollie: new Person({
+        },
+        Ollie: {
+          type: "Person",
           x: utils.withGrid(14),
           y: utils.withGrid(20),
           src: "/images/characters/people/ollieOtter.png",
           talking: [
             {
               events: [
-                { type: "textMessage", text: "You made it!", faceHero:"npcB" },
+                { type: "textMessage", text: "You made it!", faceHero:"Ollie" },
               ]
             }
           ]
-        })
+        }
       },
 
       cutsceneSpaces: {
@@ -311,12 +313,14 @@ export const OverworldMaps = {
             events: [
               { type: "changeMap", map: "Jungle" }
             ]
-            
+
           }
         ],
 
         [utils.asGridCoord(12,31)]: [
           {
+            //The intro only makes sense the first time you walk up the beach
+            oneShot: true,
             events: [
               { who: "Ollie", type: "walk",  direction: "down" },
               { who: "Ollie", type: "walk",  direction: "down" },
@@ -329,7 +333,7 @@ export const OverworldMaps = {
               { who: "Ollie", type: "walk",  direction: "down" },
               { who: "Ollie", type: "walk",  direction: "down" },
               { who: "Ollie", type: "walk",  direction: "down" },
-              
+
               { who: "Ollie", type: "stand",  direction: "up", time: 500 },
               { who: "hero", type: "stand",  direction: "right"},
               { type: "textMessage", text:"Ollie: Oh hey, there you are! I’ve heard about you!"},
@@ -355,7 +359,7 @@ export const OverworldMaps = {
               { type: "textMessage", text:"Ollie: Hmm..."},
               { type: "textMessage", text:"Ollie: Maybe it's better if you just follow me."},
 
-              
+
               { who: "Ollie", type: "walk",  direction: "up" },
               { who: "Ollie", type: "walk",  direction: "up" },
               { who: "Ollie", type: "walk",  direction: "up" },
@@ -377,7 +381,7 @@ export const OverworldMaps = {
               { who: "hero", type: "walk",  direction: "up" },
               { who: "hero", type: "walk",  direction: "up" },
 
-              
+
               { who: "hero", type: "walk",  direction: "left" },
               { who: "hero", type: "walk",  direction: "left" },
 
@@ -408,7 +412,7 @@ export const OverworldMaps = {
             ]
           }
         ],
-        
+
 
       },
       walls: {
@@ -419,5 +423,5 @@ export const OverworldMaps = {
         [utils.asGridCoord(11,20)] : true,
       },
     },
-    
+
   }

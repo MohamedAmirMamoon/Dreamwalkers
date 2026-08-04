@@ -1,6 +1,9 @@
 import { GameObject } from "./GameObject.js";
 import { utils } from "./utils.js";
 
+//How long a "stand" lasts when the event config doesn't say
+const DEFAULT_STAND_TIME = 400;
+
 export class Person extends GameObject {
   constructor(config) {
     super(config);
@@ -15,6 +18,14 @@ export class Person extends GameObject {
       "left": ["x", -1],
       "right": ["x", 1],
     }
+  }
+
+  unmount() {
+    super.unmount();
+    //A stand that was in flight when the map changed would otherwise leave
+    //isStanding stuck true and freeze this person's behavior loop forever.
+    this.isStanding = false;
+    this.movingProgressRemaining = 0;
   }
 
   update(state) {
@@ -38,14 +49,19 @@ export class Person extends GameObject {
   }
 
   startBehavior(state, behavior) {
+    //Nothing to do if my map is no longer on screen
+    if (!this.isActiveOn(state.map)) {
+      return;
+    }
+
     //Set character direction to whatever behavior has
     this.direction = behavior.direction;
-    
+
     if (behavior.type === "walk") {
       //Stop here if space is not free
       if (state.map.isSpaceTaken(this.x, this.y, this.direction)) {
 
-        behavior.retry && setTimeout(() => {
+        behavior.retry && this.setTimeout(() => {
           this.startBehavior(state, behavior)
         }, 10);
 
@@ -60,12 +76,13 @@ export class Person extends GameObject {
 
     if (behavior.type === "stand") {
       this.isStanding = true;
-      setTimeout(() => {
+      const time = behavior.time === undefined ? DEFAULT_STAND_TIME : behavior.time;
+      this.setTimeout(() => {
+        this.isStanding = false;
         utils.emitEvent("PersonStandComplete", {
           whoId: this.id
         })
-        this.isStanding = false;
-      }, behavior.time)
+      }, time)
     }
 
   }
@@ -89,7 +106,7 @@ export class Person extends GameObject {
       this.sprite.setAnimation("walk-"+this.direction);
       return;
     }
-    this.sprite.setAnimation("idle-"+this.direction);    
+    this.sprite.setAnimation("idle-"+this.direction);
   }
 
 }
