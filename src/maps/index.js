@@ -207,6 +207,7 @@ export const OverworldMaps = {
                 {
                   events: [
                     { type: "textMessage", text: "aah im lost... where do i go!", faceHero: "billy" },
+                    { type: "textMessage", text: "i wonder where my otter went?" },
                   ]
                 }
               ]
