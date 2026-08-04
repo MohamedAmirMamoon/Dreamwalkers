@@ -178,6 +178,15 @@ export const OverworldMaps = {
               //Face the camera so you see his front, not the back of his head.
               direction: "down",
               src: "/images/characters/people/billy.png",
+              //Looking around for the way out: left, right, left, then back to
+              //facing you. Never "up" - that row of his sheet is the back of his
+              //head, and the loop should always read as him searching.
+              behaviorLoop: [
+                { type: "stand",  direction: "left",  time: 900 },
+                { type: "stand",  direction: "right", time: 900 },
+                { type: "stand",  direction: "left",  time: 900 },
+                { type: "stand",  direction: "down",  time: 1200 },
+              ],
               talking: [
                 {
                   events: [
