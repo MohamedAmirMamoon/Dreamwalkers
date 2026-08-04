@@ -621,15 +621,17 @@ async function testStandDefault() {
   console.log("\n(g) stand with no time");
   const overworld = makeOverworld();
   overworld.directionInput = { direction: undefined };
-  overworld.startMap("Beach");
+  // Kitchen's npcB has no behaviorLoop, so nothing starts a fresh stand the
+  // moment the cutscene ends - which is what lets us observe isStanding clear.
+  overworld.startMap("Kitchen");
   const map = overworld.map;
-  const ollie = map.gameObjects.Ollie;
+  const idler = map.gameObjects.npcB;
 
   const started = Date.now();
-  await map.startCutscene([{ who: "Ollie", type: "stand", direction: "right" }]);
+  await map.startCutscene([{ who: "npcB", type: "stand", direction: "right" }]);
   const elapsed = Date.now() - started;
   check(`stand without a time waits a sensible default (${elapsed}ms)`, elapsed >= 100, elapsed);
-  check("isStanding clears after the stand", ollie.isStanding === false);
+  check("isStanding clears after the stand", idler.isStanding === false);
 
   // A stand interrupted by a map change must not leave isStanding stuck
   overworld.startMap("Beach");
