@@ -1,4 +1,8 @@
-class OverworldEvent {
+import { TextMessage } from "../ui/TextMessage.js";
+import { utils } from "./utils.js";
+import { OverworldMaps } from "../maps/index.js";
+
+export class OverworldEvent {
     constructor({ map, event}) {
       this.map = map;
       this.event = event;
@@ -60,7 +64,7 @@ class OverworldEvent {
     }
   
     changeMap(resolve) {
-      this.map.overworld.startMap( window.OverworldMaps[this.event.map] );
+      this.map.overworld.startMap( OverworldMaps[this.event.map] );
       resolve();
     }
   

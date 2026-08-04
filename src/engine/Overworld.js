@@ -1,4 +1,9 @@
-class Overworld {
+import { OverworldMap } from "./OverworldMap.js";
+import { DirectionInput } from "./DirectionInput.js";
+import { KeyPressListener } from "./KeyPressListener.js";
+import { OverworldMaps } from "../maps/index.js";
+
+export class Overworld {
 
     constructor(config) {
         this.element = config.element;
@@ -65,7 +70,7 @@ class Overworld {
     }
 
     init() {
-        this.startMap(window.OverworldMaps.Bedroom);
+        this.startMap(OverworldMaps.Bedroom);
 
 
         this.bindActionInput();

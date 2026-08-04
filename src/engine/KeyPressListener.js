@@ -1,4 +1,4 @@
-class KeyPressListener {
+export class KeyPressListener {
     constructor(keyCode, callback) {
       let keySafe = true;
       this.keydownFunction = function(event) {

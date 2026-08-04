@@ -1,4 +1,4 @@
-class DirectionInput {
+export class DirectionInput {
     constructor() {
         this.heldDirections = [];
 

@@ -1,4 +1,7 @@
-class Person extends GameObject {
+import { GameObject } from "./GameObject.js";
+import { utils } from "./utils.js";
+
+export class Person extends GameObject {
   constructor(config) {
     super(config);
     this.movingProgressRemaining = 0;
