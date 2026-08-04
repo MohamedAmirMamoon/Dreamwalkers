@@ -405,6 +405,22 @@ export const OverworldMaps = {
           x: utils.withGrid(14),
           y: utils.withGrid(20),
           src: "/images/characters/people/ollieOtter.png",
+          //Pottering about on the sand. Deliberately a CLOSED circuit - the same
+          //number of steps right as left - so he always returns to (14,20) and
+          //never drifts into the tiles the intro cutscene walks the hero through.
+          //A drifting NPC parked on that route would block a retry:true walk and
+          //hang the intro forever. He also never steps left of (14,20): (13,20)
+          //is a wall, and a blocked behavior-loop walk retries for good.
+          behaviorLoop: [
+            { type: "stand",  direction: "down",  time: 1100 },
+            { type: "walk",   direction: "right" },
+            { type: "stand",  direction: "down",  time: 900 },
+            { type: "walk",   direction: "right" },
+            { type: "stand",  direction: "left",  time: 800 },
+            { type: "walk",   direction: "left" },
+            { type: "stand",  direction: "down",  time: 900 },
+            { type: "walk",   direction: "left" },
+          ],
           talking: [
             {
               events: [
