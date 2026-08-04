@@ -77,6 +77,21 @@ export function compose(...sets) {
   return Object.assign({}, ...sets);
 }
 
+// Wall everything on a `width` x `height` map EXCEPT the walkable tiles.
+// `walkable` is a wall-set object (pixel-space keys) describing the floor;
+// the result is its complement over the whole grid. Useful when the open area
+// is small (a path through a forest) and listing the walls would be huge.
+export function invert(walkable, width, height) {
+  const out = {};
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const k = key(x, y);
+      if (!walkable[k]) out[k] = true;
+    }
+  }
+  return out;
+}
+
 // Punch tiles out of a wall set (for doorways, exits, gaps).
 // Accepts either a wall set object or a list of [x,y] tuples in `holes`.
 export function subtract(set, ...holes) {
