@@ -212,6 +212,32 @@ export const OverworldMaps = {
                 }
               ]
           },
+          Ollie: {
+            type: "Person",
+            isPlayerControlled: false,
+            //End of the branch that runs right (east) from below Billy, in the
+            //clearing at the far end of the trail. Verified solid dirt in the
+            //art rather than a tree - the north-east tiles the path trace picked
+            //up around (73,22) are actually trunk, which is brown too.
+            x: utils.withGrid(70),
+            y: utils.withGrid(27),
+            //Facing back down the path, so he's looking at you as you arrive.
+            direction: "down",
+            src: "/images/characters/people/ollieOtter.png",
+            behaviorLoop: [
+              { type: "stand",  direction: "down",  time: 1400 },
+              { type: "stand",  direction: "left",  time: 700 },
+              { type: "stand",  direction: "down",  time: 900 },
+              { type: "stand",  direction: "right", time: 700 },
+            ],
+            talking: [
+              {
+                events: [
+                  { type: "textMessage", text: "Ollie: There you are! I've been waiting ages.", faceHero: "Ollie" },
+                ]
+              }
+            ]
+          },
           snake: {
             type: "Person",
             isPlayerControlled: false,
