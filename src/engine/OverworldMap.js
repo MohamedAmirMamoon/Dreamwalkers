@@ -168,9 +168,25 @@ export class OverworldMap {
       const match = Object.values(this.gameObjects).find(object => {
         return `${object.x},${object.y}` === `${nextCoords.x},${nextCoords.y}`
       });
-      if (!this.isCutscenePlaying && match && match.talking.length) {
-        this.startCutscene(match.talking[0].events)
+      if (this.isCutscenePlaying || !match || !match.talking.length) {
+        return;
       }
+
+      //Use the first line of dialogue that's still available. A `oneShot` entry
+      //is skipped once it has played, so a conversation can advance permanently
+      //past a story beat and fall through to whatever follows it. Keyed by
+      //person id, so it survives leaving and re-entering the map just like
+      //one-shot cutscene spaces do.
+      const scene = match.talking.find(option => {
+        return !option.oneShot || !this.hasCompletedOneShot(`talk:${match.id}`);
+      });
+      if (!scene) {
+        return;
+      }
+      if (scene.oneShot) {
+        this.markCompletedOneShot(`talk:${match.id}`);
+      }
+      this.startCutscene(scene.events)
     }
 
     checkForFootstepCutscene() {

@@ -18,6 +18,39 @@ const snakeBlock = (face, back) => [
   }
 ];
 
+//Routes for the escort cutscene, run-length encoded so a 39-step walk stays
+//readable: "4l" is four steps left. u/d/l/r map to up/down/left/right.
+const DIRECTIONS = { u: "up", d: "down", l: "left", r: "right" };
+const route = encoded => encoded.split(" ").flatMap(token => {
+  const count = Number(token.slice(0, -1));
+  return Array(count).fill(DIRECTIONS[token.slice(-1)]);
+});
+
+//Walk two people to a destination together, one tile apart, by alternating
+//their steps: the leader moves, then the follower steps into the tile the
+//leader just left. That ordering matters. Every person occupies a wall, and
+//cutscene walks use retry:true - so a follower who tried to enter a tile its
+//leader still stood on would retry forever and hang the game outright.
+//
+//Both routes below were solved with a breadth-first search over the real wall
+//data and then replayed through a simulation of the engine's own wall
+//bookkeeping, confirming all 77 steps land on open path. Re-solve them (don't
+//hand-edit) if the jungle terrain, Billy, or Ollie ever move.
+const escort = (leader, leaderRoute, follower, followerRoute) => {
+  const lead = route(leaderRoute);
+  const trail = route(followerRoute);
+  const steps = [];
+  for (let i = 0; i < Math.max(lead.length, trail.length); i++) {
+    if (i < lead.length) {
+      steps.push({ who: leader, type: "walk", direction: lead[i] });
+    }
+    if (i < trail.length) {
+      steps.push({ who: follower, type: "walk", direction: trail[i] });
+    }
+  }
+  return steps;
+};
+
 //Map entries are pure data blueprints. Nothing in here is a live game object:
 //OverworldMap instantiates a fresh set of game objects and copies the walls
 //every time a map is mounted, so leaving and re-entering a map always replays
@@ -215,25 +248,53 @@ export const OverworldMaps = {
           Ollie: {
             type: "Person",
             isPlayerControlled: false,
-            //End of the branch that runs right (east) from below Billy, in the
-            //clearing at the far end of the trail. Verified solid dirt in the
-            //art rather than a tree - the north-east tiles the path trace picked
-            //up around (73,22) are actually trunk, which is brown too.
-            x: utils.withGrid(70),
+            //The dead-end pocket at the far east end of the trail, reachable
+            //only from (70,27). Sitting in a dead end is deliberate: it means
+            //the hero can only ever talk to Ollie while standing on (70,27),
+            //so the escort cutscene below has exactly one starting layout to
+            //solve for instead of four.
+            x: utils.withGrid(71),
             y: utils.withGrid(27),
             //Facing back down the path, so he's looking at you as you arrive.
-            direction: "down",
+            direction: "left",
             src: "/images/characters/people/ollieOtter.png",
             behaviorLoop: [
-              { type: "stand",  direction: "down",  time: 1400 },
-              { type: "stand",  direction: "left",  time: 700 },
-              { type: "stand",  direction: "down",  time: 900 },
-              { type: "stand",  direction: "right", time: 700 },
+              { type: "stand",  direction: "left",  time: 1400 },
+              { type: "stand",  direction: "up",    time: 700 },
+              { type: "stand",  direction: "left",  time: 900 },
+              { type: "stand",  direction: "down",  time: 700 },
             ],
             talking: [
               {
+                //oneShot: the routes below are solved for one exact starting
+                //layout (Ollie in the pocket, hero on (70,27)). Replaying it
+                //from anywhere else walks someone into a wall, and a retry:true
+                //walk against a wall hangs the game for good.
+                oneShot: true,
                 events: [
                   { type: "textMessage", text: "Ollie: There you are! I've been waiting ages.", faceHero: "Ollie" },
+                  { type: "textMessage", text: "Ollie: Come on - Billy must be worried sick. Follow me!" },
+                  //Hero steps west out of the way first: Ollie's only exit from
+                  //the pocket is through (70,27), which is where the hero is
+                  //standing to have this conversation.
+                  { who: "hero", type: "walk", direction: "left" },
+                  ...escort(
+                    "Ollie", "1l 1u 4l 1d 5l 2d 5l 2d 4l 1d 8l 1u 2l 1u 1l",
+                    "hero",  "1u 3l 1d 5l 2d 5l 2d 4l 1d 8l 1u 4l",
+                  ),
+                  //Ollie ends on Billy's right at (41,30) and turns to him; the
+                  //hero ends in front of Billy at (40,31) and looks up at him.
+                  { who: "Ollie", type: "stand", direction: "left", time: 400 },
+                  { who: "hero",  type: "stand", direction: "up",   time: 500 },
+                  { who: "billy", type: "stand", direction: "down", time: 400 },
+                  { type: "textMessage", text: "oh my gosh, THANK YOU for finding Ollie, I've been looking everywhere for him! :D" },
+                ]
+              },
+              //Falls through to this once the escort above has played, so
+              //talking to Ollie again is a normal chat instead of a re-run.
+              {
+                events: [
+                  { type: "textMessage", text: "Ollie: Much better with a friend around, huh?", faceHero: "Ollie" },
                 ]
               }
             ]
@@ -301,7 +362,11 @@ export const OverworldMaps = {
             line(33,26,34,26),
             line(40,26,43,26),
             line(47,26,48,26),
-            line(59,26,71,26),
+            //Stops at 70: (71,26) is foliage in the art, not dirt. The pixel
+            //trace counted it as path because the tree canopy there is only
+            //19% brown, and leaving it walkable would let you stand in a bush
+            //AND give Ollie's nook a second entrance (see (71,27) below).
+            line(59,26,70,26),
             line(15,27,18,27),
             line(29,27,30,27),
             line(33,27,35,27),
@@ -313,7 +378,11 @@ export const OverworldMaps = {
             line(29,28,31,28),
             line(33,28,42,28),
             line(53,28,61,28),
-            line(70,28,70,28),
+            //(70,28) removed: 16% dirt, so it's foliage the trace misread.
+            //Sealing it (with (71,26) above) makes (71,27) a genuine dead end
+            //reachable only from (70,27). Ollie sits in it, so when you talk to
+            //him the hero can only ever be standing on (70,27) - which is what
+            //lets the walk-to-Billy cutscene use one fixed, pre-verified route.
             line(17,29,18,29),
             line(26,29,26,29),
             line(29,29,42,29),

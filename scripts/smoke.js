@@ -643,6 +643,105 @@ async function testStandDefault() {
   check("isStanding is cleared by the map change", ollie2.isStanding === false);
 }
 
+/* ------------------------------------------- Ollie's escort walk to Billy */
+
+//The escort is 77 sequential walks with retry:true, so a single step into an
+//occupied tile hangs the game permanently. Replay the authored routes against
+//the real wall data using the engine's own wall bookkeeping (walls move when a
+//walk STARTS, which is what lets the follower enter the tile the leader just
+//left) and prove every step lands on open ground.
+async function testOllieEscort() {
+  console.log("\n(h) Ollie escorts the hero to Billy");
+  const jungle = OverworldMaps.Jungle;
+  const blueprint = jungle.gameObjects;
+
+  const ollieStart = [blueprint.Ollie.x / 16, blueprint.Ollie.y / 16];
+  const billy = [blueprint.billy.x / 16, blueprint.billy.y / 16];
+
+  // Ollie must sit in a dead end, so talking to him is only possible from one
+  // tile and the routes have a single starting layout to satisfy.
+  const terrain = { ...jungle.walls };
+  const open = (x, y) => !terrain[`${x * 16},${y * 16}`];
+  const neighbours = [[0, -1], [0, 1], [-1, 0], [1, 0]]
+    .filter(([dx, dy]) => open(ollieStart[0] + dx, ollieStart[1] + dy));
+  check("Ollie sits in a dead end (one approach only)", neighbours.length === 1,
+    neighbours.map(([dx, dy]) => `${ollieStart[0] + dx},${ollieStart[1] + dy}`).join(" "));
+  const heroStart = [ollieStart[0] + neighbours[0][0], ollieStart[1] + neighbours[0][1]];
+
+  // The escort is the first talking option and must be one-shot: replaying it
+  // from anywhere else walks someone into a wall and never recovers.
+  const scene = blueprint.Ollie.talking[0];
+  check("the escort is oneShot", scene.oneShot === true);
+  check("Ollie has a follow-up line for afterwards", blueprint.Ollie.talking.length > 1);
+
+  // Walk the whole scene. Every person is a wall (mountObjects does this), so
+  // seed the occupied set with all three characters.
+  const walls = new Set(Object.keys(terrain).map(k => k.split(",").map(n => Number(n) / 16).join(",")));
+  const at = { Ollie: [...ollieStart], hero: [...heroStart], billy: [...billy] };
+  Object.values(at).forEach(([x, y]) => walls.add(`${x},${y}`));
+
+  const DELTAS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+  let blockedAt = null;
+  let walkCount = 0;
+  for (const event of scene.events) {
+    if (event.type !== "walk") continue;
+    walkCount++;
+    const who = event.who;
+    const [dx, dy] = DELTAS[event.direction];
+    const from = at[who];
+    const to = [from[0] + dx, from[1] + dy];
+    if (walls.has(`${to[0]},${to[1]}`)) {
+      blockedAt = `${who} step #${walkCount} ${event.direction} into ${to}`;
+      break;
+    }
+    walls.delete(`${from[0]},${from[1]}`);
+    walls.add(`${to[0]},${to[1]}`);
+    at[who] = to;
+  }
+  check("no step in the escort is ever blocked", blockedAt === null, blockedAt);
+  check("the escort actually walks somewhere", walkCount > 30, walkCount);
+
+  // Requested final tableau: hero in front of Billy, Ollie on Billy's right.
+  check("hero ends in front of Billy", `${at.hero}` === `${billy[0]},${billy[1] + 1}`, `${at.hero}`);
+  check("Ollie ends on Billy's right", `${at.Ollie}` === `${billy[0] + 1},${billy[1]}`, `${at.Ollie}`);
+  check("Billy never moves", `${at.billy}` === `${billy}`);
+
+  // Billy's thank-you is the payoff and has to come last.
+  const messages = scene.events.filter(e => e.type === "textMessage");
+  check("Billy thanks you at the end of the scene",
+    /THANK YOU for finding Ollie/.test(messages[messages.length - 1].text));
+
+  // A spent one-shot conversation must fall through instead of replaying.
+  const overworld = makeOverworld();
+  overworld.directionInput = { direction: undefined };
+  overworld.startMap("Jungle");
+  const map = overworld.map;
+  const hero = map.gameObjects.hero;
+  map.removeWall(hero.x, hero.y);
+  hero.x = heroStart[0] * 16;
+  hero.y = heroStart[1] * 16;
+  map.addWall(hero.x, hero.y);
+  // neighbours[0] points from Ollie to the hero, so face the hero back at him.
+  hero.direction = neighbours[0][0] < 0 ? "right" : neighbours[0][0] > 0 ? "left"
+    : neighbours[0][1] < 0 ? "down" : "up";
+
+  // Record which scene each conversation starts instead of letting the walks run.
+  const started = [];
+  map.startCutscene = events => { started.push(events); };
+
+  map.checkForActionCutscene();
+  check("talking to Ollie starts the escort", started.length === 1 && started[0] === scene.events);
+  check("the one-shot escort was recorded",
+    overworld.hasCompletedOneShot("Jungle", "talk:Ollie") === true);
+
+  // Talk again: must fall through to the follow-up line, never replay the walk.
+  map.checkForActionCutscene();
+  check("talking again does not replay the escort",
+    started.length === 2 && started[1] !== scene.events);
+  check("talking again gives the follow-up line",
+    started[1] === blueprint.Ollie.talking[1].events);
+}
+
 /* -------------------------------------------------------------------- main */
 
 console.log("Dreamwalkers engine smoke test");
@@ -654,6 +753,7 @@ await testCutsceneSpaceGuards();
 await testCameraClamping();
 await testSpriteConfig();
 await testStandDefault();
+await testOllieEscort();
 
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length) {
