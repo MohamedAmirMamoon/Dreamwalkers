@@ -92,6 +92,16 @@ export class OverworldEvent {
       message.init( document.querySelector(".game-container") )
     }
 
+    //Drop an item into the hero's backpack, then continue. No-ops gracefully if
+    //there's no inventory (e.g. the headless smoke harness) so cutscenes still run.
+    addToInventory(resolve) {
+      const inventory = this.map.overworld && this.map.overworld.inventory;
+      if (inventory) {
+        inventory.addItem(this.event.item);
+      }
+      resolve();
+    }
+
     changeMap(resolve) {
       //Resolve before swapping so the outgoing cutscene loop unwinds instead of
       //continuing to run events against the map we're about to destroy. It sees

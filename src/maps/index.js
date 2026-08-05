@@ -288,6 +288,8 @@ export const OverworldMaps = {
                   { who: "hero",  type: "stand", direction: "up",   time: 500 },
                   { who: "billy", type: "stand", direction: "down", time: 400 },
                   { type: "textMessage", text: "oh my gosh, THANK YOU for finding Ollie, I've been looking everywhere for him! :D" },
+                  { type: "textMessage", text: "billy: Here, take this flute - it's the least I can do." },
+                  { type: "addToInventory", item: { icon: "🪈", name: "Flute", count: 1 } },
                 ]
               },
               //Falls through to this once the escort above has played, so

@@ -708,8 +708,15 @@ async function testOllieEscort() {
 
   // Billy's thank-you is the payoff and has to come last.
   const messages = scene.events.filter(e => e.type === "textMessage");
-  check("Billy thanks you at the end of the scene",
-    /THANK YOU for finding Ollie/.test(messages[messages.length - 1].text));
+  check("Billy thanks you near the end of the scene",
+    messages.some(m => /THANK YOU for finding Ollie/.test(m.text)));
+
+  // The escort hands over a flute as a reward, right after the thank-you.
+  const gift = scene.events.find(e => e.type === "addToInventory");
+  check("the escort gives you the flute", gift && gift.item.name === "Flute");
+  const thanksIdx = scene.events.findIndex(e => e.type === "textMessage" && /THANK YOU/.test(e.text));
+  check("the flute is given after Billy thanks you",
+    gift && scene.events.indexOf(gift) > thanksIdx);
 
   // A spent one-shot conversation must fall through instead of replaying.
   const overworld = makeOverworld();

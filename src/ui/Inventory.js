@@ -46,6 +46,20 @@ export class Inventory {
       .addEventListener("click", () => this.close());
   }
 
+  //Add an item (or bump its count if we already hold one). Re-renders the list
+  //so an open panel updates live. Called from the addToInventory cutscene event.
+  addItem(item) {
+    const existing = this.items.find(i => i.name === item.name);
+    if (existing) {
+      existing.count += item.count || 1;
+    } else {
+      this.items.push({ icon: item.icon || "❔", name: item.name, count: item.count || 1 });
+    }
+    if (this.panel) {
+      this.panel.querySelector(".Inventory_list").innerHTML = this.renderItems();
+    }
+  }
+
   renderItems() {
     if (!this.items.length) {
       return `<li class="Inventory_empty">Your backpack is empty.</li>`;
