@@ -230,7 +230,7 @@ export class Overworld {
         this.isTransitioning = true;
         this.transition.playIntro({
             swap: async () => {
-                this.startMap("Jungle");
+                this.startMap("Bedroom");
                 await this.waitForMapArt(this.map);
             },
         }).finally(() => {
