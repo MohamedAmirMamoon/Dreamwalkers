@@ -1,0 +1,37 @@
+/* Yes/No prompt. Same dialogue box as TextMessage, a little taller to fit the
+   two buttons. */
+.QuestionMessage {
+  position: absolute;
+  margin: 10px;
+  border-radius: 5px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 4px;
+  background: var(--menu-background);
+  border-top: 1px solid var(--menu-border-color);
+  color: var(--menu-font-color);
+}
+.QuestionMessage_p {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+}
+.QuestionMessage_buttons {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.QuestionMessage_button {
+  font-size: 9px;
+  padding: 1px 8px;
+  -webkit-appearance: none;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.QuestionMessage_button:hover {
+  background: var(--menu-selected-background);
+}

@@ -1,4 +1,5 @@
 import { TextMessage } from "../ui/TextMessage.js";
+import { QuestionMessage } from "../ui/QuestionMessage.js";
 import { utils } from "./utils.js";
 
 export class OverworldEvent {
@@ -98,6 +99,64 @@ export class OverworldEvent {
       const inventory = this.map.overworld && this.map.overworld.inventory;
       if (inventory) {
         inventory.addItem(this.event.item);
+      }
+      resolve();
+    }
+
+    //Yes/No prompt. Runs the `yes`/`no` branch of sub-events based on the
+    //choice, then resolves. Headless (no game-container) auto-picks the default
+    //(yes) so cutscenes still run under the smoke harness.
+    question(resolve) {
+      const runBranch = async choice => {
+        const branch = choice ? this.event.yes : this.event.no;
+        if (Array.isArray(branch)) {
+          for (const sub of branch) {
+            if (!this.map.isActive) {
+              break;
+            }
+            await new OverworldEvent({ map: this.map, event: sub }).init();
+          }
+        }
+        resolve();
+      };
+
+      //A `when(map)` guard lets the prompt only appear under some condition
+      //(e.g. the hero holds the flute). When it fails, skip straight to `no`
+      //without ever showing the box.
+      if (this.event.when && !this.event.when(this.map)) {
+        runBranch(false);
+        return;
+      }
+
+      const container = document.querySelector(".game-container");
+      if (!container) {
+        runBranch(true);
+        return;
+      }
+      const prompt = new QuestionMessage({
+        text: this.event.text,
+        onDecide: choice => runBranch(choice),
+      });
+      prompt.init(container);
+    }
+
+    //Set a named story flag on the overworld (e.g. "snakeAsleep").
+    setFlag(resolve) {
+      const overworld = this.map.overworld;
+      if (overworld) {
+        overworld.setFlag(this.event.flag);
+      }
+      resolve();
+    }
+
+    //Remove a game object from the map (and free its wall), e.g. the snake once
+    //it slithers off. No-ops if it's already gone.
+    removeObject(resolve) {
+      const who = this.map.gameObjects[this.event.who];
+      if (who) {
+        who.unmount();
+        this.map.removeWall(who.x, who.y);
+        delete this.map.gameObjects[this.event.who];
       }
       resolve();
     }

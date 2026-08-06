@@ -7,12 +7,39 @@ import { rect, line, border, compose, subtract, points, invert } from "../collis
 //the 3-step retreat. Each tile needs its own route: the trail is not a uniform
 //corridor, and every step has to land on open path because these walks use
 //retry:true and would spin forever against a wall.
+//Putting the snake to sleep with the flute, then getting out of the ring. Used
+//as the `yes` branch of the flute prompt from any guarded tile.
+const playFlute = back => [
+  { type: "textMessage", text: "You raise the flute and play a slow, drowsy tune..." },
+  { who: "snake", type: "stand", direction: "left", time: 600 },
+  { type: "textMessage", text: "Sssso... ssssleepy... zzzzz." },
+  { type: "setFlag", flag: "snakeAsleep" },
+  //The sleeping snake slithers off, freeing the gate for good.
+  { type: "removeObject", who: "snake" },
+  { type: "textMessage", text: "The snake curls up and drifts off. The path west is clear!" },
+  ...back.map(direction => ({ who: "hero", type: "walk", direction })),
+];
+
+//A guarded tile around the snake. `face` is the direction the snake lies from
+//this tile; `back` is the 3-step retreat that shoves the hero clear of the ring.
+//If the hero holds a Flute you're offered the chance to use it (yes -> the snake
+//sleeps and leaves); otherwise the snake just turns you back as before. Every
+//space is gated on !snakeAsleep so none of this fires once the snake is gone.
 const snakeBlock = (face, back) => [
   {
+    when: map => !map.overworld || !map.overworld.hasFlag("snakeAsleep"),
     events: [
       { who: "hero", type: "stand", direction: face, time: 200 },
       { type: "textMessage", text: "Hssss, sssoo sssHungry! You ssshall not passss!" },
-      ...back.map(direction => ({ who: "hero", type: "walk", direction })),
+      {
+        //Only offer the flute if the hero actually has one; otherwise fall
+        //straight through to the plain turn-back.
+        type: "question",
+        text: "Play the Flute?",
+        when: map => map.overworld && map.overworld.hasItem("Flute"),
+        yes: playFlute(back),
+        no: back.map(direction => ({ who: "hero", type: "walk", direction })),
+      },
       { who: "hero", type: "stand", direction: "left", time: 300 },
     ]
   }
@@ -216,8 +243,13 @@ export const OverworldMaps = {
           hero: {
               type: "Person",
               isPlayerControlled: true,
-              x: utils.withGrid(29),
-              y: utils.withGrid(32),
+              //Spawn up on the top-right stretch of the trail (row 10, the
+              //north-east end) rather than down next to the snake at column 28.
+              //The whole path is one connected component, so Billy, the snake,
+              //and Ollie are all still reachable from here.
+              x: utils.withGrid(61),
+              y: utils.withGrid(11),
+              direction: "down",
           },
           billy: {
               type: "Person",
@@ -237,6 +269,15 @@ export const OverworldMaps = {
                 { type: "stand",  direction: "down",  time: 1200 },
               ],
               talking: [
+                //Once Ollie has been walked home (the escort marks that one-shot
+                //as done), Billy only ever gives his thank-you line - the old
+                //"where's my otter" lines are gone for good.
+                {
+                  when: map => map.hasCompletedOneShot("talk:Ollie"),
+                  events: [
+                    { type: "textMessage", text: "thank you btw for returning ollie!", faceHero: "billy" },
+                  ]
+                },
                 {
                   events: [
                     { type: "textMessage", text: "aah im lost... where do i go!", faceHero: "billy" },
@@ -274,13 +315,25 @@ export const OverworldMaps = {
                 events: [
                   { type: "textMessage", text: "Ollie: There you are! I've been waiting ages.", faceHero: "Ollie" },
                   { type: "textMessage", text: "Ollie: Come on - Billy must be worried sick. Follow me!" },
-                  //Hero steps west out of the way first: Ollie's only exit from
-                  //the pocket is through (70,27), which is where the hero is
-                  //standing to have this conversation.
-                  { who: "hero", type: "walk", direction: "left" },
+                  //Ollie has to LEAD, but he starts in the pocket EAST of the
+                  //hero and the trail out is single-file, so he first has to
+                  //overtake:
+                  //  1. the hero steps UP to (70,26), yielding the corridor,
+                  //  2. Ollie takes two solo steps west along row 27 so he is
+                  //     genuinely ahead,
+                  //  3. the hero drops back in behind and trails him one tile
+                  //     back the whole way (escort() alternates hero-then-Ollie
+                  //     now that the hero is the follower).
+                  //Solved and verified by scripts/solveEscort.mjs - re-run it
+                  //(don't hand-edit) if the terrain, Billy, or Ollie ever move.
+                  //It proves no step is blocked, the tableau below lands, and
+                  //the hero is never on ground Ollie hasn't already crossed.
+                  { who: "hero",  type: "walk", direction: "up" },
+                  { who: "Ollie", type: "walk", direction: "left" },
+                  { who: "Ollie", type: "walk", direction: "left" },
                   ...escort(
-                    "Ollie", "1l 1u 4l 1d 5l 2d 5l 2d 4l 1d 8l 1u 2l 1u 1l",
-                    "hero",  "1u 3l 1d 5l 2d 5l 2d 4l 1d 8l 1u 4l",
+                    "hero",  "1d 1l 1u 3l 1d 5l 2d 5l 2d 4l 1d 8l 1u 4l",
+                    "Ollie", "1u 3l 1d 5l 2d 5l 2d 4l 1d 8l 1u 2l 1u 1l",
                   ),
                   //Ollie ends on Billy's right at (41,30) and turns to him; the
                   //hero ends in front of Billy at (40,31) and looks up at him.

@@ -30,6 +30,15 @@ export const utils = {
         return "up"
     },
 
+    //Resolve an absolute-from-root asset path (e.g. "/images/x.png") against
+    //Vite's configured base, so builds served from a subpath (GitHub Pages'
+    ///Dreamwalkers/) load their assets instead of 404ing at the domain root.
+    //Guarded for Node (import.meta.env is undefined in the smoke harness).
+    assetUrl(path) {
+        const base = (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.BASE_URL) || "/";
+        return base.replace(/\/$/, "") + path;
+    },
+
     emitEvent(name, detail) {
         const event = new CustomEvent(name, {
           detail

@@ -5,20 +5,59 @@ import { KeyPressListener } from "../engine/KeyPressListener.js";
 //same key or the panel's close button shuts it. While the panel is open the
 //overworld freezes input (see Overworld.isInventoryOpen) so the hero can't
 //wander off underneath it.
+//localStorage key the backpack contents are saved under. Bump the suffix if the
+//stored shape ever changes so old saves don't load into a new format.
+const STORAGE_KEY = "dreamwalkers.inventory.v1";
+
 export class Inventory {
-  constructor({ container, items, onOpenChange }) {
+  constructor({ container, items, onOpenChange, onItemAdded }) {
     this.container = container;
-    //Placeholder starting items. Swap for real game state whenever the
-    //inventory system grows past "look at it".
-    this.items = items || [
+    //Default starting items, used only when there's nothing saved yet. Swap for
+    //real game state whenever the inventory system grows past "look at it".
+    this.defaultItems = items || [
       { icon: "🌙", name: "Dream Shard", count: 3 },
       { icon: "🗝️", name: "Rusty Key", count: 1 },
       { icon: "🍎", name: "Apple", count: 2 },
     ];
+    //Prefer a saved backpack (survives a reload) over the defaults. This is the
+    //pre-reload persistence hook; server/cloud storage can layer on top later.
+    this.items = this.load() || this.defaultItems.map(item => ({ ...item }));
     this.onOpenChange = onOpenChange || (() => {});
+    //Fired whenever an item is picked up, so the overworld can pop a toast.
+    this.onItemAdded = onItemAdded || (() => {});
     this.isOpen = false;
     this.button = null;
     this.panel = null;
+  }
+
+  //Read the saved backpack. Returns null (falls back to defaults) when there's
+  //nothing stored, no localStorage (headless), or the data is unreadable.
+  load() {
+    try {
+      if (typeof localStorage === "undefined") {
+        return null;
+      }
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        return null;
+      }
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  //Persist the current backpack. No-ops gracefully without localStorage.
+  save() {
+    try {
+      if (typeof localStorage === "undefined") {
+        return;
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.items));
+    } catch {
+      //Storage full or blocked (private mode) - not worth interrupting play.
+    }
   }
 
   createElement() {
@@ -47,7 +86,9 @@ export class Inventory {
   }
 
   //Add an item (or bump its count if we already hold one). Re-renders the list
-  //so an open panel updates live. Called from the addToInventory cutscene event.
+  //so an open panel updates live, saves to localStorage, and fires onItemAdded
+  //so the overworld can announce the pickup. Called from the addToInventory
+  //cutscene event.
   addItem(item) {
     const existing = this.items.find(i => i.name === item.name);
     if (existing) {
@@ -58,6 +99,8 @@ export class Inventory {
     if (this.panel) {
       this.panel.querySelector(".Inventory_list").innerHTML = this.renderItems();
     }
+    this.save();
+    this.onItemAdded(item);
   }
 
   renderItems() {

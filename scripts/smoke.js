@@ -117,11 +117,23 @@ globalThis.CustomEvent = FakeCustomEvent;
 globalThis.Image = FakeImage;
 globalThis.requestAnimationFrame = () => 0; // never actually loop in tests
 
+// Minimal in-memory localStorage so the inventory's persistence path runs under
+// test the same way it does in a browser.
+const fakeStore = new Map();
+globalThis.localStorage = {
+  getItem: key => (fakeStore.has(key) ? fakeStore.get(key) : null),
+  setItem: (key, value) => { fakeStore.set(key, String(value)); },
+  removeItem: key => { fakeStore.delete(key); },
+  clear: () => { fakeStore.clear(); },
+};
+
 /* ---------------------------------------------------------------- helpers */
 
 const { Overworld } = await import("../src/engine/Overworld.js");
 const { OverworldMaps } = await import("../src/maps/index.js");
 const { utils } = await import("../src/engine/utils.js");
+const { Inventory } = await import("../src/ui/Inventory.js");
+const { OverworldEvent } = await import("../src/engine/OverworldEvent.js");
 
 let passed = 0;
 const failures = [];
@@ -192,8 +204,8 @@ async function testFreshSpawnsOnReentry() {
     walk(overworld, "up", 1);
 
     overworld.startMap("Jungle");
-    check(`round ${round}: Jungle spawn is 29,32`, heroTile(overworld) === "29,32", heroTile(overworld));
-    walk(overworld, "left", 2);
+    check(`round ${round}: Jungle spawn is 61,11`, heroTile(overworld) === "61,11", heroTile(overworld));
+    walk(overworld, "left", 1);
   }
 
   overworld.startMap("Bedroom");
@@ -443,19 +455,24 @@ async function testCutsceneSpaceGuards() {
   );
   check("all four reachable ring tiles are guarded", guardedKeys.size === 4, [...guardedKeys].join(" "));
 
+  const walkTile = (x, y, dir) =>
+    dir === "right" ? [x + 1, y] : dir === "left" ? [x - 1, y]
+      : dir === "up" ? [x, y - 1] : [x, y + 1];
   for (const key of guardedKeys) {
     const [tx, ty] = key.split(",").map(Number);
     const events = jungleSpaces[`${tx * 16},${ty * 16}`][0].events;
     check(`snake ring (${tx},${ty}) shows a message`, events.some(e => e.type === "textMessage"));
 
+    // The turn-back walks now live in the flute question's `no` branch (played
+    // when you have no flute / decline). Pull them from there.
+    const question = events.find(e => e.type === "question");
+    check(`snake ring (${tx},${ty}) offers the flute`, !!question && Array.isArray(question.no));
+    const steps = (question.no || []).filter(e => e.type === "walk");
+
     let x = tx, y = ty;
     let blocked = null;
-    const steps = events.filter(e => e.type === "walk");
     for (const walkStep of steps) {
-      if (walkStep.direction === "right") x += 1;
-      else if (walkStep.direction === "left") x -= 1;
-      else if (walkStep.direction === "up") y -= 1;
-      else y += 1;
+      [x, y] = walkTile(x, y, walkStep.direction);
       // the snake's own tile is a wall too, not just terrain
       if (terrain[`${x * 16},${y * 16}`] || (x === SNAKE[0] && y === SNAKE[1])) {
         blocked = `${x},${y}`;
@@ -465,6 +482,19 @@ async function testCutsceneSpaceGuards() {
     check(`snake ring (${tx},${ty}) pushback never hits a wall`, blocked === null, blocked);
     check(`snake ring (${tx},${ty}) pushback is 3 tiles`, steps.length === 3, steps.length);
     check(`snake ring (${tx},${ty}) pushback ends clear of the ring`, !inRing(x, y), `${x},${y}`);
+
+    // The flute `yes` branch must set the sleep flag and remove the snake so the
+    // gate opens, and its own retreat walk must never hit a wall either.
+    const yes = question.yes || [];
+    check(`snake ring (${tx},${ty}) flute sets snakeAsleep`, yes.some(e => e.type === "setFlag" && e.flag === "snakeAsleep"));
+    check(`snake ring (${tx},${ty}) flute removes the snake`, yes.some(e => e.type === "removeObject" && e.who === "snake"));
+    let yx = tx, yy = ty, yBlocked = null;
+    for (const walkStep of yes.filter(e => e.type === "walk")) {
+      [yx, yy] = walkTile(yx, yy, walkStep.direction);
+      // the snake has just left, so its tile is walkable in this branch
+      if (terrain[`${yx * 16},${yy * 16}`]) { yBlocked = `${yx},${yy}`; break; }
+    }
+    check(`snake ring (${tx},${ty}) flute retreat never hits a wall`, yBlocked === null, yBlocked);
   }
 
   // the snake itself has to seal row 31, otherwise the gate is walkable around
@@ -475,13 +505,13 @@ async function testCutsceneSpaceGuards() {
 
   // (28,32) is the ONLY remaining opening: with it and the snake shut, nothing
   // west of the gate is reachable from the hero's spawn.
-  const gated = reachableTiles(terrain, 29, 32, new Set(["28,31", "28,32"]));
+  const gated = reachableTiles(terrain, 61, 11, new Set(["28,31", "28,32"]));
   check("west of the snake is sealed while the gate holds", !gated.has("25,33") && !gated.has("17,35"));
   check("billy is still reachable on the near side", gated.has("40,30"));
 
   // ...and opening the gate must genuinely restore the west, so the puzzle has
   // somewhere to lead once the "do something" step exists.
-  const opened = reachableTiles(terrain, 29, 32, new Set(["28,31"]));
+  const opened = reachableTiles(terrain, 61, 11, new Set(["28,31"]));
   check("opening the gate reconnects the western trail", opened.has("25,33") && opened.has("17,35"));
 }
 
@@ -683,6 +713,17 @@ async function testOllieEscort() {
   const DELTAS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
   let blockedAt = null;
   let walkCount = 0;
+  // Leadership guard: Ollie must lead, so while he is still travelling the hero
+  // must never stand on ground Ollie hasn't already crossed. The one allowed
+  // exception is the yield tile just off the trail (up from the hero's start).
+  // Once Ollie reaches his final tile (Billy's right) he has arrived and is
+  // leading by definition, so the hero completing his own last steps to the
+  // spot in front of Billy no longer counts. A violation before then means the
+  // hero walked out in front - the exact bug this scene was rewritten to fix.
+  const ollieVisited = new Set([`${at.Ollie}`]);
+  const yieldTile = `${heroStart[0]},${heroStart[1] - 1}`;
+  const ollieEnd = `${billy[0] + 1},${billy[1]}`;
+  let heroLed = null;
   for (const event of scene.events) {
     if (event.type !== "walk") continue;
     walkCount++;
@@ -697,9 +738,16 @@ async function testOllieEscort() {
     walls.delete(`${from[0]},${from[1]}`);
     walls.add(`${to[0]},${to[1]}`);
     at[who] = to;
+    ollieVisited.add(`${at.Ollie}`);
+    const heroKey = `${at.hero}`;
+    const ollieArrived = `${at.Ollie}` === ollieEnd;
+    if (!heroLed && !ollieArrived && heroKey !== yieldTile && !ollieVisited.has(heroKey)) {
+      heroLed = `hero on ${heroKey} at step #${walkCount} before Ollie`;
+    }
   }
   check("no step in the escort is ever blocked", blockedAt === null, blockedAt);
   check("the escort actually walks somewhere", walkCount > 30, walkCount);
+  check("Ollie leads - the hero never walks out in front", heroLed === null, heroLed);
 
   // Requested final tableau: hero in front of Billy, Ollie on Billy's right.
   check("hero ends in front of Billy", `${at.hero}` === `${billy[0]},${billy[1] + 1}`, `${at.hero}`);
@@ -749,6 +797,106 @@ async function testOllieEscort() {
     started[1] === blueprint.Ollie.talking[1].events);
 }
 
+/* ---------------------------------------- inventory pickups + persistence */
+
+//A picked-up item must (a) fire the onItemAdded callback so the overworld can
+//toast "Obtained <name>!", (b) actually land in the bag, and (c) survive a
+//"reload" via localStorage - a fresh Inventory reads the saved contents back.
+async function testInventoryPickup() {
+  console.log("\n(i) inventory pickups notify and persist");
+  localStorage.clear();
+
+  const container = { appendChild() {} };
+  const added = [];
+  const bag = new Inventory({
+    container,
+    onItemAdded: item => added.push(item),
+  });
+
+  const before = bag.items.length;
+  bag.addItem({ icon: "🪈", name: "Flute", count: 1 });
+  check("onItemAdded fires with the picked-up item", added.length === 1 && added[0].name === "Flute");
+  check("the item lands in the bag", bag.items.some(i => i.name === "Flute" && i.count === 1));
+  check("adding a new item grows the bag by one", bag.items.length === before + 1);
+
+  // Same item again bumps the count instead of duplicating.
+  bag.addItem({ icon: "🪈", name: "Flute", count: 1 });
+  check("re-adding bumps the count", bag.items.find(i => i.name === "Flute").count === 2);
+  check("re-adding does not duplicate the row", bag.items.filter(i => i.name === "Flute").length === 1);
+
+  // "Reload": a fresh Inventory should load the exact saved bag.
+  const savedLength = bag.items.length;
+  const reloaded = new Inventory({ container });
+  const flute = reloaded.items.find(i => i.name === "Flute");
+  check("a fresh inventory loads the saved bag (localStorage)", flute && flute.count === 2);
+  check("reload restores the whole saved bag", reloaded.items.length === savedLength);
+
+  // With nothing saved, a fresh inventory falls back to the defaults.
+  localStorage.clear();
+  const fresh = new Inventory({ container });
+  check("an empty store falls back to the default items",
+    fresh.items.some(i => i.name === "Dream Shard"));
+  check("a fresh bag has no leftover Flute", !fresh.items.some(i => i.name === "Flute"));
+
+  localStorage.clear();
+}
+
+/* -------------------------------------- Billy's dialogue + flute snake puzzle */
+
+async function testStoryProgression() {
+  console.log("\n(j) Billy's thank-you and the flute snake puzzle");
+  const overworld = makeOverworld();
+  overworld.directionInput = { direction: undefined };
+  overworld.startMap("Jungle");
+  const map = overworld.map;
+
+  // --- Billy swaps his line once Ollie is home ---
+  const billy = map.gameObjects.billy;
+  const pick = () => billy.talking.find(o => !o.when || o.when(map));
+  const before = pick();
+  check("Billy asks about his otter before Ollie is home",
+    before.events.some(e => /otter/.test(e.text)));
+  overworld.markCompletedOneShot("Jungle", "talk:Ollie");
+  const after = pick();
+  check("Billy thanks you once Ollie is home",
+    after.events.some(e => /thank you btw for returning ollie/i.test(e.text)));
+  check("Billy's old otter line is gone after returning Ollie",
+    !after.events.some(e => /where do i go|wonder where my otter/.test(e.text)));
+
+  // --- snake space gates on the snakeAsleep flag ---
+  const guard = OverworldMaps.Jungle.cutsceneSpaces[utils.asGridCoord(28, 32)][0];
+  const fakeMapNoFlag = { overworld: { hasFlag: () => false } };
+  const fakeMapAsleep = { overworld: { hasFlag: () => true } };
+  check("snake block is live while the snake is awake", guard.when(fakeMapNoFlag) === true);
+  check("snake block stops firing once the snake is asleep", guard.when(fakeMapAsleep) === false);
+
+  // --- the flute question runs its branches; hasFlag/hasItem/removeObject work ---
+  // No flute: the question skips straight to the turn-back (never resolves yes).
+  overworld.inventory = { items: [] };
+  const q = guard.events.find(e => e.type === "question");
+  check("the flute question only shows when you hold a Flute",
+    q.when({ overworld }) === false);
+  overworld.inventory = { items: [{ name: "Flute", count: 1 }] };
+  check("the flute question shows once you have the Flute",
+    q.when({ overworld }) === true);
+
+  // Play the flute and prove the snake is gone, its wall is freed, and the flag
+  // is set. Run only the effectful events (textMessage/stand wait on input or
+  // timers, which never resolve in this headless slice).
+  check("snake exists before the flute", !!map.gameObjects.snake);
+  const snakeKey = `${map.gameObjects.snake.x},${map.gameObjects.snake.y}`;
+  for (const event of q.yes) {
+    if (event.type === "setFlag" || event.type === "removeObject") {
+      await new OverworldEvent({ map, event }).init();
+    }
+  }
+  check("playing the flute sets snakeAsleep", overworld.hasFlag("snakeAsleep") === true);
+  check("the snake is removed after the flute", !map.gameObjects.snake);
+  check("the snake's wall is freed after the flute", !map.walls[snakeKey]);
+  // With the snake asleep, the guard no longer fires - the puzzle is solved.
+  check("the snake block is dead once solved", guard.when(map) === false);
+}
+
 /* -------------------------------------------------------------------- main */
 
 console.log("Dreamwalkers engine smoke test");
@@ -761,6 +909,8 @@ await testCameraClamping();
 await testSpriteConfig();
 await testStandDefault();
 await testOllieEscort();
+await testInventoryPickup();
+await testStoryProgression();
 
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length) {

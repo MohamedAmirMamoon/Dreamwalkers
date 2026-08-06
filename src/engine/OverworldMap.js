@@ -172,12 +172,16 @@ export class OverworldMap {
         return;
       }
 
-      //Use the first line of dialogue that's still available. A `oneShot` entry
-      //is skipped once it has played, so a conversation can advance permanently
-      //past a story beat and fall through to whatever follows it. Keyed by
-      //person id, so it survives leaving and re-entering the map just like
-      //one-shot cutscene spaces do.
+      //Use the first line of dialogue that's still available. A `when(map)`
+      //predicate lets an option gate itself on story state (e.g. Billy's
+      //thank-you only after Ollie is home). A `oneShot` entry is skipped once it
+      //has played, so a conversation can advance permanently past a story beat
+      //and fall through to whatever follows it. Both are keyed by person id, so
+      //they survive leaving and re-entering the map just like one-shot spaces.
       const scene = match.talking.find(option => {
+        if (option.when && !option.when(this)) {
+          return false;
+        }
         return !option.oneShot || !this.hasCompletedOneShot(`talk:${match.id}`);
       });
       if (!scene) {
@@ -208,6 +212,11 @@ export class OverworldMap {
       }
 
       const space = match[0];
+      //A `when(map)` predicate lets a space gate itself on story state - e.g.
+      //the snake's turn-back stops firing once it has been put to sleep.
+      if (space.when && !space.when(this)) {
+        return;
+      }
       if (space.oneShot && this.hasCompletedOneShot(heroKey)) {
         return;
       }

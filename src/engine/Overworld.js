@@ -5,6 +5,7 @@ import { OverworldMaps } from "../maps/index.js";
 import { utils } from "./utils.js";
 import { SceneTransition } from "../transitions/SceneTransition.js";
 import { Inventory } from "../ui/Inventory.js";
+import { Notification } from "../ui/Notification.js";
 
 export class Overworld {
 
@@ -16,6 +17,8 @@ export class Overworld {
         this.isGameLoopRunning = false;
         //Keyed "MapId:x,y" - one-shot cutscene spaces that have already fired.
         this.completedOneShots = {};
+        //Story flags: named booleans for world state (e.g. the snake is asleep).
+        this.storyFlags = {};
         //True for the whole duration of a scene transition. Freezes the world
         //(no updates, no input) so the scene holds still under the wipe.
         this.isTransitioning = false;
@@ -24,6 +27,7 @@ export class Overworld {
         //way a transition does, so the hero doesn't walk around underneath it.
         this.isInventoryOpen = false;
         this.inventory = null;
+        this.notification = null;
     }
 
     //Where the hero sits on screen, in canvas pixels - the circle closes on the
@@ -188,6 +192,21 @@ export class Overworld {
         this.completedOneShots[`${mapId}:${coordKey}`] = true;
     }
 
+    //Generic story flags (e.g. "snakeAsleep"), set by cutscene events and read
+    //by `when` predicates on dialogue/spaces. Separate from one-shots because a
+    //flag is about world state, not "this exact trigger already ran".
+    hasFlag(name) {
+        return !!this.storyFlags[name];
+    }
+    setFlag(name) {
+        this.storyFlags[name] = true;
+    }
+
+    //Does the hero currently hold this item? Reads live inventory contents.
+    hasItem(name) {
+        return !!this.inventory && this.inventory.items.some(item => item.name === name);
+    }
+
     //Accepts a map id from OverworldMaps. Every call builds a brand new
     //OverworldMap from the blueprint, so spawn points, NPC state and walls are
     //always the authored ones.
@@ -218,9 +237,13 @@ export class Overworld {
         this.bindActionInput();
         this.bindHeroPositionCheck();
 
+        this.notification = new Notification({ container: this.element });
+
         this.inventory = new Inventory({
             container: this.element,
             onOpenChange: isOpen => { this.isInventoryOpen = isOpen; },
+            //Announce every pickup with a toast: "Obtained <name>!"
+            onItemAdded: item => this.notification.obtained(item.name),
         });
         this.inventory.init();
 
